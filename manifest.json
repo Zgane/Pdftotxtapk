@@ -1,7 +1,7 @@
 {
-  "name": "PDF v TXT",
-  "short_name": "PDF-TXT",
-  "description": "Pretvori PDF v besedilo, lokalno na napravi",
+  "name": "AI orodjarna",
+  "short_name": "AI orodja",
+  "description": "Pretvorniki za AI: PDF, OCR, Word, Excel, slike - vse lokalno na napravi",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

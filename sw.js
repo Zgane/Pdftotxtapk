@@ -1,4 +1,4 @@
-const CACHE = "pdf2txt-v1";
+const CACHE = "pdf2txt-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,7 +24,18 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET") return;
   e.respondWith(
-    caches.match(e.request).then((hit) => hit || fetch(e.request))
+    caches.match(e.request).then((hit) => {
+      if (hit) return hit;
+      return fetch(e.request).then((resp) => {
+        // sproti predpomni knjižnice iz CDN-jev (tesseract, mammoth, xlsx)
+        if (resp.ok && (e.request.url.includes("cdnjs.cloudflare.com") || e.request.url.includes("jsdelivr.net"))) {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
+        return resp;
+      });
+    })
   );
 });

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#14181d">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>PDF → TXT</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  :root {
+    --bg: #14181d;
+    --panel: #1d232b;
+    --panel-2: #232b35;
+    --ink: #e8edf2;
+    --ink-dim: #8b98a5;
+    --accent: #4fd1a5;
+    --accent-ink: #0c1512;
+    --line: #2e3844;
+    --err: #f28b82;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding: 16px;
+    gap: 14px;
+  }
+  header { display: flex; align-items: baseline; gap: 10px; }
+  header h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  header span { color: var(--ink-dim); font-size: 0.8rem; }
+
+  #dropzone {
+    border: 2px dashed var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    padding: 34px 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #dropzone:active, #dropzone.drag { border-color: var(--accent); background: var(--panel-2); }
+  #dropzone .big { font-size: 2rem; margin-bottom: 8px; }
+  #dropzone p { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.45; }
+  #dropzone p b { color: var(--ink); font-weight: 600; }
+  #fileInput { display: none; }
+
+  #status {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    min-height: 1.2em;
+  }
+  #status.error { color: var(--err); }
+
+  #progressWrap {
+    height: 4px; border-radius: 2px; background: var(--line);
+    overflow: hidden; display: none;
+  }
+  #progressBar {
+    height: 100%; width: 0%; background: var(--accent);
+    transition: width .2s;
+  }
+
+  #result {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+    min-height: 0;
+  }
+  #meta {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 0.8rem; color: var(--ink-dim);
+  }
+  #meta b { color: var(--ink); font-weight: 600; }
+
+  #output {
+    flex: 1;
+    min-height: 180px;
+    width: 100%;
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    resize: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  #output:focus { outline: 1px solid var(--accent); }
+
+  .btnrow { display: flex; gap: 10px; }
+  button {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: filter .1s;
+  }
+  button:active { filter: brightness(1.15); }
+  #copyBtn { background: var(--accent); color: var(--accent-ink); }
+  #saveBtn { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
+  #resetBtn {
+    background: none; border: none; color: var(--ink-dim);
+    font-size: 0.85rem; font-weight: 500; padding: 8px; flex: 0;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PDF → TXT</h1>
+  <span>vse ostane na telefonu</span>
+</header>
+
+<div id="dropzone">
+  <div class="big">&#128196;</div>
+  <p><b>Tapni in izberi PDF</b><br>ali ga povleci sem</p>
+</div>
+<input type="file" id="fileInput" accept="application/pdf">
+
+<div id="progressWrap"><div id="progressBar"></div></div>
+<div id="status"></div>
+
+<div id="result">
+  <div id="meta">
+    <span>&#128462; <b id="mName"></b></span>
+    <span>strani: <b id="mPages"></b></span>
+    <span>znakov: <b id="mChars"></b></span>
+  </div>
+  <textarea id="output" readonly></textarea>
+  <div class="btnrow">
+    <button id="copyBtn">Kopiraj besedilo</button>
+    <button id="saveBtn">Shrani .txt</button>
+  </div>
+  <div class="btnrow" style="justify-content:center">
+    <button id="resetBtn">Nov PDF</button>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const dz = document.getElementById("dropzone");
+const fi = document.getElementById("fileInput");
+const statusEl = document.getElementById("status");
+const progWrap = document.getElementById("progressWrap");
+const progBar = document.getElementById("progressBar");
+const result = document.getElementById("result");
+const output = document.getElementById("output");
+const copyBtn = document.getElementById("copyBtn");
+const saveBtn = document.getElementById("saveBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+let currentName = "dokument";
+
+dz.addEventListener("click", () => fi.click());
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+dz.addEventListener("drop", e => {
+  e.preventDefault();
+  dz.classList.remove("drag");
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fi.addEventListener("change", () => { if (fi.files.length) handleFile(fi.files[0]); });
+
+function setStatus(msg, isError) {
+  statusEl.textContent = msg;
+  statusEl.classList.toggle("error", !!isError);
+}
+
+async function handleFile(file) {
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    setStatus("To ni PDF datoteka.", true);
+    return;
+  }
+  currentName = file.name.replace(/\.pdf$/i, "");
+  result.style.display = "none";
+  progWrap.style.display = "block";
+  progBar.style.width = "0%";
+  setStatus("Berem PDF ...");
+
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const total = pdf.numPages;
+    let pages = [];
+
+    for (let i = 1; i <= total; i++) {
+      setStatus("Stran " + i + " / " + total);
+      progBar.style.width = Math.round(i / total * 100) + "%";
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+
+      // Sestavi besedilo z upoštevanjem vrstic (Y koordinata)
+      let lines = [];
+      let lastY = null;
+      let line = [];
+      for (const item of content.items) {
+        if (!item.str) continue;
+        const y = item.transform[5];
+        if (lastY !== null && Math.abs(y - lastY) > 2) {
+          if (line.length) lines.push(line.join(" "));
+          line = [];
+        }
+        line.push(item.str);
+        lastY = y;
+      }
+      if (line.length) lines.push(line.join(" "));
+
+      const pageText = lines.join("\n").replace(/[ \t]+/g, " ").trim();
+      pages.push("===== STRAN " + i + " =====\n" + pageText);
+    }
+
+    const text = pages.join("\n\n");
+    if (!text.replace(/=+ STRAN \d+ =+/g, "").trim()) {
+      setStatus("PDF ne vsebuje besedila (verjetno je skeniran kot slika). Za tak PDF bi bil potreben OCR.", true);
+      progWrap.style.display = "none";
+      return;
+    }
+
+    output.value = text;
+    document.getElementById("mName").textContent = file.name;
+    document.getElementById("mPages").textContent = total;
+    document.getElementById("mChars").textContent = text.length.toLocaleString("sl-SI");
+    result.style.display = "flex";
+    progWrap.style.display = "none";
+    setStatus("Končano.");
+  } catch (err) {
+    console.error(err);
+    progWrap.style.display = "none";
+    setStatus("Napaka pri branju: " + (err.message || err), true);
+  }
+}
+
+copyBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(output.value);
+    copyBtn.textContent = "Kopirano ✓";
+  } catch {
+    output.removeAttribute("readonly");
+    output.select();
+    document.execCommand("copy");
+    output.setAttribute("readonly", "");
+    copyBtn.textContent = "Kopirano ✓";
+  }
+  setTimeout(() => copyBtn.textContent = "Kopiraj besedilo", 1800);
+});
+
+saveBtn.addEventListener("click", () => {
+  const blob = new Blob([output.value], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = currentName + ".txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+resetBtn.addEventListener("click", () => {
+  result.style.display = "none";
+  output.value = "";
+  fi.value = "";
+  setStatus("");
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+</body>
+</html>

@@ -6,8 +6,7 @@
 <meta name="theme-color" content="#14181d">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>PDF → TXT</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<title>AI orodjarna</title>
 <style>
   :root {
     --bg: #14181d;
@@ -29,65 +28,70 @@
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
-    padding: 16px;
-    gap: 14px;
+    padding: 14px;
+    gap: 12px;
   }
   header { display: flex; align-items: baseline; gap: 10px; }
-  header h1 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-  }
-  header span { color: var(--ink-dim); font-size: 0.8rem; }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.02em; }
+  header span { color: var(--ink-dim); font-size: 0.75rem; }
 
-  #dropzone {
-    border: 2px dashed var(--line);
-    border-radius: 16px;
+  nav {
+    display: flex; gap: 6px; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  nav button {
+    flex: 0 0 auto;
     background: var(--panel);
-    padding: 34px 18px;
+    color: var(--ink-dim);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 9px 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  nav button.active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  section { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+  section.active { display: flex; }
+
+  .desc { color: var(--ink-dim); font-size: 0.8rem; line-height: 1.45; }
+
+  .dropzone {
+    border: 2px dashed var(--line);
+    border-radius: 14px;
+    background: var(--panel);
+    padding: 26px 16px;
     text-align: center;
     cursor: pointer;
     transition: border-color .15s, background .15s;
     -webkit-tap-highlight-color: transparent;
   }
-  #dropzone:active, #dropzone.drag { border-color: var(--accent); background: var(--panel-2); }
-  #dropzone .big { font-size: 2rem; margin-bottom: 8px; }
-  #dropzone p { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.45; }
-  #dropzone p b { color: var(--ink); font-weight: 600; }
-  #fileInput { display: none; }
+  .dropzone:active { border-color: var(--accent); background: var(--panel-2); }
+  .dropzone .big { font-size: 1.7rem; margin-bottom: 6px; }
+  .dropzone p { color: var(--ink-dim); font-size: 0.85rem; line-height: 1.4; }
+  .dropzone p b { color: var(--ink); font-weight: 600; }
+  input[type=file] { display: none; }
 
-  #status {
-    font-size: 0.85rem;
-    color: var(--ink-dim);
-    min-height: 1.2em;
-  }
-  #status.error { color: var(--err); }
+  .status { font-size: 0.82rem; color: var(--ink-dim); min-height: 1.2em; }
+  .status.error { color: var(--err); }
 
-  #progressWrap {
-    height: 4px; border-radius: 2px; background: var(--line);
-    overflow: hidden; display: none;
-  }
-  #progressBar {
-    height: 100%; width: 0%; background: var(--accent);
-    transition: width .2s;
-  }
+  .progwrap { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; display: none; }
+  .progbar { height: 100%; width: 0%; background: var(--accent); transition: width .2s; }
 
-  #result {
-    display: none;
-    flex-direction: column;
-    gap: 10px;
+  .result { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+  .meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-dim); }
+  .meta b { color: var(--ink); font-weight: 600; }
+
+  textarea.out {
     flex: 1;
-    min-height: 0;
-  }
-  #meta {
-    display: flex; gap: 14px; flex-wrap: wrap;
-    font-size: 0.8rem; color: var(--ink-dim);
-  }
-  #meta b { color: var(--ink); font-weight: 600; }
-
-  #output {
-    flex: 1;
-    min-height: 180px;
+    min-height: 160px;
     width: 100%;
     background: var(--panel);
     color: var(--ink);
@@ -95,193 +99,495 @@
     border-radius: 12px;
     padding: 12px;
     font-family: "SF Mono", Consolas, monospace;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     line-height: 1.5;
     resize: none;
     -webkit-overflow-scrolling: touch;
   }
-  #output:focus { outline: 1px solid var(--accent); }
+  textarea.out:focus { outline: 1px solid var(--accent); }
 
   .btnrow { display: flex; gap: 10px; }
-  button {
+  .btnrow button {
     flex: 1;
     border: none;
     border-radius: 12px;
-    padding: 14px 10px;
-    font-size: 0.95rem;
+    padding: 13px 10px;
+    font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: filter .1s;
   }
-  button:active { filter: brightness(1.15); }
-  #copyBtn { background: var(--accent); color: var(--accent-ink); }
-  #saveBtn { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); }
-  #resetBtn {
-    background: none; border: none; color: var(--ink-dim);
-    font-size: 0.85rem; font-weight: 500; padding: 8px; flex: 0;
-    text-decoration: underline; text-underline-offset: 3px;
+  .btnrow button:active { filter: brightness(1.15); }
+  .btn-copy { background: var(--accent); color: var(--accent-ink); }
+  .btn-save { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line) !important; }
+
+  .optrow {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 0.82rem; color: var(--ink-dim); flex-wrap: wrap;
   }
+  .optrow select {
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.85rem;
+  }
+
+  #imgPreview {
+    max-width: 100%; max-height: 220px;
+    border-radius: 12px; border: 1px solid var(--line);
+    align-self: center; display: none;
+  }
+  .sizecompare {
+    display: none; justify-content: center; gap: 16px;
+    font-size: 0.85rem; color: var(--ink-dim);
+  }
+  .sizecompare b { color: var(--accent); }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>PDF → TXT</h1>
+  <h1>AI orodjarna</h1>
   <span>vse ostane na telefonu</span>
 </header>
 
-<div id="dropzone">
-  <div class="big">&#128196;</div>
-  <p><b>Tapni in izberi PDF</b><br>ali ga povleci sem</p>
-</div>
-<input type="file" id="fileInput" accept="application/pdf">
+<nav id="tabs">
+  <button data-tab="pdf" class="active">PDF</button>
+  <button data-tab="ocr">OCR</button>
+  <button data-tab="docx">Word</button>
+  <button data-tab="xlsx">Excel</button>
+  <button data-tab="img">Slika</button>
+</nav>
 
-<div id="progressWrap"><div id="progressBar"></div></div>
-<div id="status"></div>
+<!-- ===================== PDF ===================== -->
+<section id="tab-pdf" class="active">
+  <p class="desc">Izvleče besedilo iz digitalnega PDF-ja (police, izvidi, pogodbe). Za skenirane dokumente uporabi zavihek OCR.</p>
+  <div class="dropzone" data-input="pdfInput">
+    <div class="big">&#128196;</div>
+    <p><b>Tapni in izberi PDF</b></p>
+  </div>
+  <input type="file" id="pdfInput" accept="application/pdf">
+  <div class="progwrap" id="pdfProgW"><div class="progbar" id="pdfProgB"></div></div>
+  <div class="status" id="pdfStatus"></div>
+  <div class="result" id="pdfResult">
+    <div class="meta"><span>&#128462; <b id="pdfName"></b></span><span>strani: <b id="pdfPages"></b></span><span>znakov: <b id="pdfChars"></b></span></div>
+    <textarea class="out" id="pdfOut" readonly></textarea>
+    <div class="btnrow">
+      <button class="btn-copy" data-copy="pdfOut">Kopiraj besedilo</button>
+      <button class="btn-save" data-save="pdfOut">Shrani .txt</button>
+    </div>
+  </div>
+</section>
 
-<div id="result">
-  <div id="meta">
-    <span>&#128462; <b id="mName"></b></span>
-    <span>strani: <b id="mPages"></b></span>
-    <span>znakov: <b id="mChars"></b></span>
+<!-- ===================== OCR ===================== -->
+<section id="tab-ocr">
+  <p class="desc">Prepozna besedilo na slikah in skeniranih PDF-jih (slovenščina + angleščina). Prva uporaba prenese ~15 MB podatkov, nato deluje hitreje.</p>
+  <div class="dropzone" data-input="ocrInput">
+    <div class="big">&#128247;</div>
+    <p><b>Tapni in izberi sliko ali skeniran PDF</b></p>
   </div>
-  <textarea id="output" readonly></textarea>
-  <div class="btnrow">
-    <button id="copyBtn">Kopiraj besedilo</button>
-    <button id="saveBtn">Shrani .txt</button>
+  <input type="file" id="ocrInput" accept="image/*,application/pdf">
+  <div class="progwrap" id="ocrProgW"><div class="progbar" id="ocrProgB"></div></div>
+  <div class="status" id="ocrStatus"></div>
+  <div class="result" id="ocrResult">
+    <div class="meta"><span>&#128462; <b id="ocrName"></b></span><span>znakov: <b id="ocrChars"></b></span></div>
+    <textarea class="out" id="ocrOut" readonly></textarea>
+    <div class="btnrow">
+      <button class="btn-copy" data-copy="ocrOut">Kopiraj besedilo</button>
+      <button class="btn-save" data-save="ocrOut">Shrani .txt</button>
+    </div>
   </div>
-  <div class="btnrow" style="justify-content:center">
-    <button id="resetBtn">Nov PDF</button>
+</section>
+
+<!-- ===================== DOCX ===================== -->
+<section id="tab-docx">
+  <p class="desc">Izvleče besedilo iz Word dokumentov (.docx) — pogodbe, aneksi, dopisi.</p>
+  <div class="dropzone" data-input="docxInput">
+    <div class="big">&#128221;</div>
+    <p><b>Tapni in izberi .docx</b></p>
   </div>
-</div>
+  <input type="file" id="docxInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+  <div class="status" id="docxStatus"></div>
+  <div class="result" id="docxResult">
+    <div class="meta"><span>&#128462; <b id="docxName"></b></span><span>znakov: <b id="docxChars"></b></span></div>
+    <textarea class="out" id="docxOut" readonly></textarea>
+    <div class="btnrow">
+      <button class="btn-copy" data-copy="docxOut">Kopiraj besedilo</button>
+      <button class="btn-save" data-save="docxOut">Shrani .txt</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== XLSX ===================== -->
+<section id="tab-xlsx">
+  <p class="desc">Pretvori Excel ali CSV v Markdown tabelo, ki jo AI odlično razume.</p>
+  <div class="dropzone" data-input="xlsxInput">
+    <div class="big">&#128202;</div>
+    <p><b>Tapni in izberi .xlsx / .csv</b></p>
+  </div>
+  <input type="file" id="xlsxInput" accept=".xlsx,.xls,.csv">
+  <div class="status" id="xlsxStatus"></div>
+  <div class="result" id="xlsxResult">
+    <div class="meta"><span>&#128462; <b id="xlsxName"></b></span><span>listi: <b id="xlsxSheets"></b></span><span>znakov: <b id="xlsxChars"></b></span></div>
+    <textarea class="out" id="xlsxOut" readonly></textarea>
+    <div class="btnrow">
+      <button class="btn-copy" data-copy="xlsxOut">Kopiraj tabelo</button>
+      <button class="btn-save" data-save="xlsxOut">Shrani .txt</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== IMG ===================== -->
+<section id="tab-img">
+  <p class="desc">Pomanjša in stisne fotografijo pred nalaganjem (npr. z 8 MB na ~200 KB) — hitreje in manj porabe limitov.</p>
+  <div class="optrow">
+    Največja stranica:
+    <select id="imgMaxDim">
+      <option value="1280">1280 px</option>
+      <option value="1600" selected>1600 px</option>
+      <option value="2048">2048 px</option>
+    </select>
+    Kakovost:
+    <select id="imgQuality">
+      <option value="0.6">nizka</option>
+      <option value="0.75" selected>srednja</option>
+      <option value="0.85">visoka</option>
+    </select>
+  </div>
+  <div class="dropzone" data-input="imgInput">
+    <div class="big">&#128248;</div>
+    <p><b>Tapni in izberi sliko</b></p>
+  </div>
+  <input type="file" id="imgInput" accept="image/*">
+  <div class="status" id="imgStatus"></div>
+  <img id="imgPreview" alt="Predogled stisnjene slike">
+  <div class="sizecompare" id="imgCompare">
+    <span>prej: <b id="imgBefore"></b></span>
+    <span>&#8594;</span>
+    <span>potem: <b id="imgAfter"></b></span>
+  </div>
+  <div class="btnrow" id="imgBtns" style="display:none">
+    <button class="btn-copy" id="imgSaveBtn">Shrani stisnjeno sliko</button>
+  </div>
+</section>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+/* ---------- pomožne funkcije ---------- */
+const loadedScripts = {};
+function loadScript(url) {
+  if (loadedScripts[url]) return loadedScripts[url];
+  loadedScripts[url] = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = url;
+    s.onload = res;
+    s.onerror = () => rej(new Error("Knjižnice ni bilo mogoče naložiti (preveri internet): " + url));
+    document.head.appendChild(s);
+  });
+  return loadedScripts[url];
+}
+function el(id) { return document.getElementById(id); }
+function setStatus(id, msg, isError) {
+  const e = el(id);
+  e.textContent = msg;
+  e.classList.toggle("error", !!isError);
+}
+function fmtSize(bytes) {
+  if (bytes > 1024 * 1024) return (bytes / 1048576).toFixed(1) + " MB";
+  return Math.round(bytes / 1024) + " KB";
+}
+let lastNames = {};
 
-const dz = document.getElementById("dropzone");
-const fi = document.getElementById("fileInput");
-const statusEl = document.getElementById("status");
-const progWrap = document.getElementById("progressWrap");
-const progBar = document.getElementById("progressBar");
-const result = document.getElementById("result");
-const output = document.getElementById("output");
-const copyBtn = document.getElementById("copyBtn");
-const saveBtn = document.getElementById("saveBtn");
-const resetBtn = document.getElementById("resetBtn");
-
-let currentName = "dokument";
-
-dz.addEventListener("click", () => fi.click());
-dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag"); });
-dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
-dz.addEventListener("drop", e => {
-  e.preventDefault();
-  dz.classList.remove("drag");
-  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+/* zavihki */
+document.querySelectorAll("#tabs button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+    btn.classList.add("active");
+    el("tab-" + btn.dataset.tab).classList.add("active");
+  });
 });
-fi.addEventListener("change", () => { if (fi.files.length) handleFile(fi.files[0]); });
 
-function setStatus(msg, isError) {
-  statusEl.textContent = msg;
-  statusEl.classList.toggle("error", !!isError);
+/* dropzone -> input */
+document.querySelectorAll(".dropzone").forEach(dz => {
+  dz.addEventListener("click", () => el(dz.dataset.input).click());
+});
+
+/* kopiraj / shrani */
+document.querySelectorAll("[data-copy]").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const ta = el(btn.dataset.copy);
+    try { await navigator.clipboard.writeText(ta.value); }
+    catch {
+      ta.removeAttribute("readonly"); ta.select();
+      document.execCommand("copy"); ta.setAttribute("readonly", "");
+    }
+    const orig = btn.textContent;
+    btn.textContent = "Kopirano ✓";
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+});
+document.querySelectorAll("[data-save]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const ta = el(btn.dataset.save);
+    const blob = new Blob([ta.value], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (lastNames[btn.dataset.save] || "besedilo") + ".txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+});
+
+/* ---------- PDF ---------- */
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+async function initPdfjs() {
+  await loadScript(PDFJS);
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
 
-async function handleFile(file) {
-  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-    setStatus("To ni PDF datoteka.", true);
-    return;
+async function extractPdfText(pdf, statusId, progId) {
+  const total = pdf.numPages;
+  let pages = [];
+  for (let i = 1; i <= total; i++) {
+    setStatus(statusId, "Stran " + i + " / " + total);
+    if (progId) el(progId).style.width = Math.round(i / total * 100) + "%";
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    let lines = [], lastY = null, line = [];
+    for (const item of content.items) {
+      if (!item.str) continue;
+      const y = item.transform[5];
+      if (lastY !== null && Math.abs(y - lastY) > 2) {
+        if (line.length) lines.push(line.join(" "));
+        line = [];
+      }
+      line.push(item.str);
+      lastY = y;
+    }
+    if (line.length) lines.push(line.join(" "));
+    pages.push("===== STRAN " + i + " =====\n" + lines.join("\n").replace(/[ \t]+/g, " ").trim());
   }
-  currentName = file.name.replace(/\.pdf$/i, "");
-  result.style.display = "none";
-  progWrap.style.display = "block";
-  progBar.style.width = "0%";
-  setStatus("Berem PDF ...");
+  return pages.join("\n\n");
+}
 
+el("pdfInput").addEventListener("change", async () => {
+  const file = el("pdfInput").files[0];
+  if (!file) return;
+  lastNames.pdfOut = file.name.replace(/\.pdf$/i, "");
+  el("pdfResult").style.display = "none";
+  el("pdfProgW").style.display = "block";
+  el("pdfProgB").style.width = "0%";
+  setStatus("pdfStatus", "Berem PDF ...");
   try {
+    await initPdfjs();
     const buf = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    const total = pdf.numPages;
-    let pages = [];
-
-    for (let i = 1; i <= total; i++) {
-      setStatus("Stran " + i + " / " + total);
-      progBar.style.width = Math.round(i / total * 100) + "%";
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-
-      // Sestavi besedilo z upoštevanjem vrstic (Y koordinata)
-      let lines = [];
-      let lastY = null;
-      let line = [];
-      for (const item of content.items) {
-        if (!item.str) continue;
-        const y = item.transform[5];
-        if (lastY !== null && Math.abs(y - lastY) > 2) {
-          if (line.length) lines.push(line.join(" "));
-          line = [];
-        }
-        line.push(item.str);
-        lastY = y;
-      }
-      if (line.length) lines.push(line.join(" "));
-
-      const pageText = lines.join("\n").replace(/[ \t]+/g, " ").trim();
-      pages.push("===== STRAN " + i + " =====\n" + pageText);
-    }
-
-    const text = pages.join("\n\n");
+    const text = await extractPdfText(pdf, "pdfStatus", "pdfProgB");
+    el("pdfProgW").style.display = "none";
     if (!text.replace(/=+ STRAN \d+ =+/g, "").trim()) {
-      setStatus("PDF ne vsebuje besedila (verjetno je skeniran kot slika). Za tak PDF bi bil potreben OCR.", true);
-      progWrap.style.display = "none";
+      setStatus("pdfStatus", "PDF ne vsebuje besedila — verjetno je skeniran. Uporabi zavihek OCR.", true);
       return;
     }
-
-    output.value = text;
-    document.getElementById("mName").textContent = file.name;
-    document.getElementById("mPages").textContent = total;
-    document.getElementById("mChars").textContent = text.length.toLocaleString("sl-SI");
-    result.style.display = "flex";
-    progWrap.style.display = "none";
-    setStatus("Končano.");
+    el("pdfOut").value = text;
+    el("pdfName").textContent = file.name;
+    el("pdfPages").textContent = pdf.numPages;
+    el("pdfChars").textContent = text.length.toLocaleString("sl-SI");
+    el("pdfResult").style.display = "flex";
+    setStatus("pdfStatus", "Končano.");
   } catch (err) {
-    console.error(err);
-    progWrap.style.display = "none";
-    setStatus("Napaka pri branju: " + (err.message || err), true);
+    el("pdfProgW").style.display = "none";
+    setStatus("pdfStatus", "Napaka: " + (err.message || err), true);
   }
-}
-
-copyBtn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(output.value);
-    copyBtn.textContent = "Kopirano ✓";
-  } catch {
-    output.removeAttribute("readonly");
-    output.select();
-    document.execCommand("copy");
-    output.setAttribute("readonly", "");
-    copyBtn.textContent = "Kopirano ✓";
-  }
-  setTimeout(() => copyBtn.textContent = "Kopiraj besedilo", 1800);
+  el("pdfInput").value = "";
 });
 
-saveBtn.addEventListener("click", () => {
-  const blob = new Blob([output.value], { type: "text/plain;charset=utf-8" });
+/* ---------- OCR ---------- */
+const TESS = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js";
+let ocrWorker = null;
+async function getOcrWorker(statusId) {
+  await loadScript(TESS);
+  if (ocrWorker) return ocrWorker;
+  setStatus(statusId, "Nalagam jezikovne podatke (prvič ~15 MB) ...");
+  ocrWorker = await Tesseract.createWorker("slv+eng", 1, {
+    logger: m => {
+      if (m.status === "recognizing text") {
+        el("ocrProgB").style.width = Math.round(m.progress * 100) + "%";
+      }
+    }
+  });
+  return ocrWorker;
+}
+
+el("ocrInput").addEventListener("change", async () => {
+  const file = el("ocrInput").files[0];
+  if (!file) return;
+  lastNames.ocrOut = file.name.replace(/\.[^.]+$/, "");
+  el("ocrResult").style.display = "none";
+  el("ocrProgW").style.display = "block";
+  el("ocrProgB").style.width = "0%";
+  try {
+    const worker = await getOcrWorker("ocrStatus");
+    let fullText = "";
+
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      await initPdfjs();
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        setStatus("ocrStatus", "OCR strani " + i + " / " + pdf.numPages + " (traja nekaj sekund) ...");
+        el("ocrProgB").style.width = "0%";
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+        canvas.width = vp.width; canvas.height = vp.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+        const { data } = await worker.recognize(canvas);
+        fullText += "===== STRAN " + i + " =====\n" + data.text.trim() + "\n\n";
+      }
+    } else {
+      setStatus("ocrStatus", "Prepoznavam besedilo (traja nekaj sekund) ...");
+      const { data } = await worker.recognize(file);
+      fullText = data.text.trim();
+    }
+
+    el("ocrProgW").style.display = "none";
+    if (!fullText.trim()) {
+      setStatus("ocrStatus", "Besedila ni bilo mogoče prepoznati. Poskusi z ostrejšo/svetlejšo sliko.", true);
+      return;
+    }
+    el("ocrOut").value = fullText.trim();
+    el("ocrName").textContent = file.name;
+    el("ocrChars").textContent = fullText.length.toLocaleString("sl-SI");
+    el("ocrResult").style.display = "flex";
+    setStatus("ocrStatus", "Končano. Preveri besedilo — OCR lahko naredi napake, zlasti pri šumnikih.");
+  } catch (err) {
+    el("ocrProgW").style.display = "none";
+    setStatus("ocrStatus", "Napaka: " + (err.message || err), true);
+  }
+  el("ocrInput").value = "";
+});
+
+/* ---------- DOCX ---------- */
+const MAMMOTH = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+el("docxInput").addEventListener("change", async () => {
+  const file = el("docxInput").files[0];
+  if (!file) return;
+  lastNames.docxOut = file.name.replace(/\.docx$/i, "");
+  el("docxResult").style.display = "none";
+  setStatus("docxStatus", "Berem dokument ...");
+  try {
+    await loadScript(MAMMOTH);
+    const buf = await file.arrayBuffer();
+    const { value } = await mammoth.extractRawText({ arrayBuffer: buf });
+    const text = value.replace(/\n{3,}/g, "\n\n").trim();
+    if (!text) { setStatus("docxStatus", "Dokument je prazen ali ga ni bilo mogoče prebrati.", true); return; }
+    el("docxOut").value = text;
+    el("docxName").textContent = file.name;
+    el("docxChars").textContent = text.length.toLocaleString("sl-SI");
+    el("docxResult").style.display = "flex";
+    setStatus("docxStatus", "Končano.");
+  } catch (err) {
+    setStatus("docxStatus", "Napaka: " + (err.message || err) + " (star .doc format ni podprt, samo .docx)", true);
+  }
+  el("docxInput").value = "";
+});
+
+/* ---------- XLSX / CSV ---------- */
+const SHEETJS = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+function sheetToMarkdown(rows) {
+  if (!rows.length) return "";
+  const width = Math.max(...rows.map(r => r.length));
+  const norm = rows.map(r => {
+    const out = [];
+    for (let i = 0; i < width; i++) {
+      out.push(String(r[i] ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ").trim());
+    }
+    return out;
+  });
+  const md = [];
+  md.push("| " + norm[0].join(" | ") + " |");
+  md.push("| " + norm[0].map(() => "---").join(" | ") + " |");
+  for (let i = 1; i < norm.length; i++) md.push("| " + norm[i].join(" | ") + " |");
+  return md.join("\n");
+}
+el("xlsxInput").addEventListener("change", async () => {
+  const file = el("xlsxInput").files[0];
+  if (!file) return;
+  lastNames.xlsxOut = file.name.replace(/\.[^.]+$/, "");
+  el("xlsxResult").style.display = "none";
+  setStatus("xlsxStatus", "Berem tabelo ...");
+  try {
+    await loadScript(SHEETJS);
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    let parts = [];
+    for (const name of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "" });
+      const trimmed = rows.filter(r => r.some(c => String(c).trim() !== ""));
+      if (!trimmed.length) continue;
+      const table = sheetToMarkdown(trimmed);
+      parts.push(wb.SheetNames.length > 1 ? "## List: " + name + "\n\n" + table : table);
+    }
+    const text = parts.join("\n\n");
+    if (!text) { setStatus("xlsxStatus", "Datoteka ne vsebuje podatkov.", true); return; }
+    el("xlsxOut").value = text;
+    el("xlsxName").textContent = file.name;
+    el("xlsxSheets").textContent = wb.SheetNames.length;
+    el("xlsxChars").textContent = text.length.toLocaleString("sl-SI");
+    el("xlsxResult").style.display = "flex";
+    setStatus("xlsxStatus", "Končano.");
+  } catch (err) {
+    setStatus("xlsxStatus", "Napaka: " + (err.message || err), true);
+  }
+  el("xlsxInput").value = "";
+});
+
+/* ---------- SLIKA ---------- */
+let compressedBlob = null, compressedName = "slika";
+el("imgInput").addEventListener("change", async () => {
+  const file = el("imgInput").files[0];
+  if (!file) return;
+  compressedName = file.name.replace(/\.[^.]+$/, "") + "-mala.jpg";
+  setStatus("imgStatus", "Stiskam ...");
+  el("imgPreview").style.display = "none";
+  el("imgCompare").style.display = "none";
+  el("imgBtns").style.display = "none";
+  try {
+    const maxDim = parseInt(el("imgMaxDim").value);
+    const quality = parseFloat(el("imgQuality").value);
+    const bmp = await createImageBitmap(file);
+    let { width, height } = bmp;
+    if (Math.max(width, height) > maxDim) {
+      const k = maxDim / Math.max(width, height);
+      width = Math.round(width * k);
+      height = Math.round(height * k);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width; canvas.height = height;
+    canvas.getContext("2d").drawImage(bmp, 0, 0, width, height);
+    compressedBlob = await new Promise(res => canvas.toBlob(res, "image/jpeg", quality));
+    el("imgPreview").src = URL.createObjectURL(compressedBlob);
+    el("imgPreview").style.display = "block";
+    el("imgBefore").textContent = fmtSize(file.size);
+    el("imgAfter").textContent = fmtSize(compressedBlob.size);
+    el("imgCompare").style.display = "flex";
+    el("imgBtns").style.display = "flex";
+    setStatus("imgStatus", "Končano (" + width + "×" + height + " px).");
+  } catch (err) {
+    setStatus("imgStatus", "Napaka: " + (err.message || err), true);
+  }
+  el("imgInput").value = "";
+});
+el("imgSaveBtn").addEventListener("click", () => {
+  if (!compressedBlob) return;
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = currentName + ".txt";
+  a.href = URL.createObjectURL(compressedBlob);
+  a.download = compressedName;
   a.click();
   URL.revokeObjectURL(a.href);
 });
 
-resetBtn.addEventListener("click", () => {
-  result.style.display = "none";
-  output.value = "";
-  fi.value = "";
-  setStatus("");
-});
-
+/* ---------- service worker ---------- */
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }

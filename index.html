@@ -1,25 +1,26 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="sl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#14181d">
+<meta name="theme-color" content="#111317">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <title>AI orodjarna</title>
 <style>
   :root {
-    --bg: #14181d;
-    --panel: #1d232b;
-    --panel-2: #232b35;
-    --ink: #e8edf2;
-    --ink-dim: #8b98a5;
-    --accent: #4fd1a5;
-    --accent-ink: #0c1512;
-    --line: #2e3844;
+    --bg: #111317;
+    --panel: #191c21;
+    --panel-2: #20242a;
+    --ink: #eceef1;
+    --ink-dim: #8a929c;
+    --accent: #5fd4ab;
+    --accent-ink: #0b1612;
+    --line: #262a31;
     --err: #f28b82;
+    --nav-h: 64px;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body {
     background: var(--bg);
@@ -28,163 +29,195 @@
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
-    padding: 14px;
-    gap: 12px;
+    padding: 20px 18px calc(var(--nav-h) + 20px + env(safe-area-inset-bottom));
+    gap: 14px;
   }
-  header { display: flex; align-items: baseline; gap: 10px; }
-  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.02em; }
-  header span { color: var(--ink-dim); font-size: 0.75rem; }
 
-  nav {
-    display: flex; gap: 6px; overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
+  header { padding-top: 6px; }
+  header h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -0.01em; }
+  header span { display: block; color: var(--ink-dim); font-size: 0.78rem; margin-top: 2px; }
+
+  /* spodnja vrstica z zavihki */
+  nav#tabs {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(17,19,23,0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    display: flex; z-index: 10;
   }
-  nav button {
-    flex: 0 0 auto;
-    background: var(--panel);
+  nav#tabs button {
+    flex: 1; min-width: 0;
+    background: none; border: none;
     color: var(--ink-dim);
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 9px 15px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    font-size: 0.66rem; font-weight: 600;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
+    position: relative;
   }
-  nav button.active {
-    background: var(--accent);
-    color: var(--accent-ink);
-    border-color: var(--accent);
+  nav#tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  nav#tabs button.active { color: var(--accent); }
+  nav#tabs button.active::before {
+    content: ""; position: absolute; top: 0; left: 30%; right: 30%;
+    height: 2px; border-radius: 0 0 2px 2px; background: var(--accent);
   }
 
-  section { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
-  section.active { display: flex; }
+  section { display: none; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+  section.active { display: flex; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-  .desc { color: var(--ink-dim); font-size: 0.8rem; line-height: 1.45; }
+  .desc { color: var(--ink-dim); font-size: 0.82rem; line-height: 1.5; }
 
   .dropzone {
-    border: 2px dashed var(--line);
-    border-radius: 14px;
+    border: 1.5px dashed var(--line);
+    border-radius: 18px;
     background: var(--panel);
-    padding: 26px 16px;
+    padding: 44px 16px;
     text-align: center;
     cursor: pointer;
     transition: border-color .15s, background .15s;
-    -webkit-tap-highlight-color: transparent;
   }
+  section > .desc { margin-bottom: auto; }
+  label.optrow { flex-wrap: nowrap; }
+  label.optrow input { flex: 0 0 auto; }
   .dropzone:active { border-color: var(--accent); background: var(--panel-2); }
-  .dropzone .big { font-size: 1.7rem; margin-bottom: 6px; }
+  .dropzone .big { display: none; }
+  .dropzone::before {
+    content: "+";
+    display: flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px; margin: 0 auto 12px;
+    border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 1.9rem; font-weight: 400; line-height: 1;
+  }
   .dropzone p { color: var(--ink-dim); font-size: 0.85rem; line-height: 1.4; }
-  .dropzone p b { color: var(--ink); font-weight: 600; }
+  .dropzone p b { color: var(--ink); font-weight: 600; font-size: 0.95rem; }
   input[type=file] { display: none; }
 
-  .status { font-size: 0.82rem; color: var(--ink-dim); min-height: 1.2em; white-space: pre-line; }
+  .btn-files {
+    background: none; color: var(--ink-dim);
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 13px; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-files:active { background: var(--panel); }
+
+  .status { font-size: 0.8rem; color: var(--ink-dim); min-height: 1.2em; }
+  .status:empty { display: none; }
   .status.error { color: var(--err); }
 
-  .progwrap { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; display: none; }
+  .progwrap { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; display: none; }
   .progbar { height: 100%; width: 0%; background: var(--accent); transition: width .2s; }
 
   .result { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
-  .meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-dim); }
+  .meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.76rem; color: var(--ink-dim); }
   .meta b { color: var(--ink); font-weight: 600; }
 
   textarea.out {
-    flex: 1;
-    min-height: 160px;
+    min-height: 140px; height: 34vh;
     width: 100%;
     background: var(--panel);
     color: var(--ink);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 12px;
-    font-family: monospace;
-    font-size: 0.76rem;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 0.75rem;
     line-height: 1.5;
     resize: none;
-    -webkit-overflow-scrolling: touch;
   }
   textarea.out:focus { outline: 1px solid var(--accent); }
 
-  .btnrow { display: flex; gap: 10px; }
+  .btnrow { display: flex; gap: 8px; }
   .btnrow button {
     flex: 1;
     border: none;
-    border-radius: 12px;
-    padding: 13px 10px;
+    border-radius: 14px;
+    padding: 14px 10px;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
   }
   .btnrow button:active { filter: brightness(1.15); }
   .btn-copy { background: var(--accent); color: var(--accent-ink); }
-  .btn-save { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line) !important; }
+  .btn-save { background: var(--panel-2); color: var(--ink); }
 
   .optrow {
-    display: flex; gap: 10px; align-items: center;
+    display: flex; gap: 8px 12px; align-items: center;
     font-size: 0.82rem; color: var(--ink-dim); flex-wrap: wrap;
   }
   .optrow select {
-    background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--line); border-radius: 8px;
-    padding: 8px 10px; font-size: 0.85rem;
+    background: var(--panel); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 10px; font-size: 0.85rem;
   }
 
   #imgPreview {
     max-width: 100%; max-height: 220px;
-    border-radius: 12px; border: 1px solid var(--line);
+    border-radius: 14px;
     align-self: center; display: none;
   }
   .sizecompare {
     display: none; justify-content: center; gap: 16px;
-    font-size: 0.85rem; color: var(--ink-dim);
+    font-size: 0.88rem; color: var(--ink-dim);
   }
   .sizecompare b { color: var(--accent); }
+
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+  .seg button { flex: 1; background: none; border: none; color: var(--ink-dim); padding: 10px; border-radius: 9px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .seg button.on { background: var(--panel-2); color: var(--ink); }
+  .mode { display: none; flex-direction: column; gap: 12px; }
+  .mode.on { display: flex; }
+  .flist { display: flex; flex-direction: column; gap: 6px; }
+  .fitem { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 12px; font-size: 0.82rem; }
+  .fitem .n { color: var(--accent); font-weight: 700; width: 16px; }
+  .fitem .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fitem .pg { color: var(--ink-dim); font-size: 0.75rem; }
+  .fitem button { background: var(--panel-2); color: var(--ink); border: none; border-radius: 8px; width: 34px; height: 34px; font-size: 0.95rem; cursor: pointer; }
+  .fitem button:disabled { opacity: 0.3; }
+  .pages-in { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 13px 12px; font-size: 1rem; }
+  .pages-in:focus { outline: 1px solid var(--accent); }
+  .hint { color: var(--ink-dim); font-size: 0.76rem; }
+
+  .pg-bar { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: var(--ink-dim); }
+  .pg-bar b { color: var(--ink); }
+  .pg-bar-btns { display: flex; gap: 6px; }
+  .pg-bar-btns button { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 7px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+  .pg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pg-grid:empty { display: none; }
+  .pg-file { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--ink-dim); padding-top: 4px; }
+  .pg-file span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pg-file button { background: none; border: 1px solid var(--line); color: var(--ink-dim); border-radius: 8px; padding: 4px 9px; font-size: 0.75rem; cursor: pointer; }
+  .pg { position: relative; aspect-ratio: 1 / 1.414; background: #fff; border-radius: 8px; overflow: hidden; cursor: pointer;
+        outline: 2px solid var(--accent); outline-offset: 2px; transition: opacity .15s, outline-color .15s; }
+  .pg canvas, .pg img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .pg .num { position: absolute; left: 6px; bottom: 6px; background: rgba(17,19,23,0.82); color: #fff; font-size: 0.7rem; font-weight: 700; border-radius: 6px; padding: 2px 6px; }
+  .pg .chk { position: absolute; right: 6px; top: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+             display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 800; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .pg.off { opacity: 0.35; outline-color: transparent; }
+  .pg.off .chk { background: rgba(17,19,23,0.6); color: transparent; border: 2px solid #fff; }
+  .pg.loading::after { content: ""; position: absolute; inset: 0; background: var(--panel-2); }
+  #mergeBtns { position: sticky; bottom: calc(var(--nav-h) + 8px + env(safe-area-inset-bottom)); z-index: 5; background: var(--bg); padding: 8px 0; margin: 0 -2px; box-shadow: 0 -12px 16px var(--bg); }
+  .dropzone.compact { padding: 16px; display: flex; align-items: center; justify-content: center; gap: 12px; text-align: left; }
+  .dropzone.compact::before { width: 36px; height: 36px; margin: 0; font-size: 1.4rem; flex: 0 0 auto; }
+  .dropzone.compact br, .dropzone.compact #mergeSub { display: none; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>AI orodjarna</h1>
-  <span>vse ostane na telefonu</span>
+  <h1 id="pageTitle">PDF v besedilo</h1>
+  <span>AI orodjarna · vse ostane na telefonu</span>
 </header>
 
-<nav id="tabs">
-  <button data-tab="polica" class="active">Očisti polico</button>
-  <button data-tab="pdf">PDF</button>
-  <button data-tab="ocr">OCR</button>
-  <button data-tab="docx">Word</button>
-  <button data-tab="xlsx">Excel</button>
-  <button data-tab="img">Slika</button>
-  <button data-tab="heic">HEIC</button>
-  <button data-tab="pdfmin">PDF manjši</button>
-</nav>
-<!-- ===================== OČISTI POLICO ===================== -->
-<section id="tab-polica" class="active">
-  <p class="desc">Odstrani rdeči vodni žig »NEVELJAVEN DOKUMENT« s polic in pripravi dokument z belim ozadjem za neposredno tiskanje ali pošiljanje.</p>
-  <div class="dropzone" data-input="policaInput">
-    <div class="big">&#128469;&#65039;</div>
-    <p><b>Tapni in izberi PDF police</b></p>
-  </div>
-  <input type="file" id="policaInput" accept="application/pdf">
-  <div class="progwrap" id="policaProgW"><div class="progbar" id="policaProgB"></div></div>
-  <div class="status" id="policaStatus"></div>
-  <div class="btnrow" id="policaBtns" style="display:none; flex-direction:column; gap:10px;">
-    <button class="btn-copy" id="policaPrintBtn">&#128424;&#65039; Natisni takoj</button>
-    <div class="btnrow" style="width:100%">
-      <button class="btn-save" id="policaSaveBtn">Shrani PDF</button>
-      <button class="btn-save" id="policaShareBtn">Deli &#8230;</button>
-    </div>
-  </div>
-</section>
 
 <!-- ===================== PDF ===================== -->
-<section id="tab-pdf">
-  <p class="desc">Izvleče besedilo iz digitalnega PDF-ja. Za skenirane dokumente uporabi zavihek OCR.</p>
+<section id="tab-pdf" class="active">
+  <p class="desc">Izvleče besedilo iz digitalnega PDF-ja (police, izvidi, pogodbe). Za skenirane dokumente uporabi zavihek OCR.</p>
   <div class="dropzone" data-input="pdfInput">
     <div class="big">&#128196;</div>
-    <p><b>Tapni in izberi PDF</b></p>
+    <p><b>Izberi PDF</b></p>
   </div>
   <input type="file" id="pdfInput" accept="application/pdf">
   <div class="progwrap" id="pdfProgW"><div class="progbar" id="pdfProgB"></div></div>
@@ -205,7 +238,7 @@
 
 <!-- ===================== OCR ===================== -->
 <section id="tab-ocr">
-  <p class="desc">Prepozna besedilo na slikah in skeniranih PDF-jih (slovenščina + angleščina).</p>
+  <p class="desc">Prepozna besedilo na slikah in skeniranih PDF-jih (slovenščina + angleščina). Prva uporaba prenese ~15 MB podatkov, nato deluje hitreje.</p>
   <div class="dropzone" data-input="ocrInput">
     <div class="big">&#128247;</div>
     <p><b>Tapni in izberi sliko ali skeniran PDF</b></p>
@@ -229,10 +262,10 @@
 
 <!-- ===================== DOCX ===================== -->
 <section id="tab-docx">
-  <p class="desc">Izvleče besedilo iz Word dokumentov (.docx).</p>
+  <p class="desc">Izvleče besedilo iz Word dokumentov (.docx) — pogodbe, aneksi, dopisi.</p>
   <div class="dropzone" data-input="docxInput">
     <div class="big">&#128221;</div>
-    <p><b>Tapni in izberi .docx</b></p>
+    <p><b>Izberi Word dokument</b></p>
   </div>
   <input type="file" id="docxInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
   <div class="status" id="docxStatus"></div>
@@ -252,10 +285,10 @@
 
 <!-- ===================== XLSX ===================== -->
 <section id="tab-xlsx">
-  <p class="desc">Pretvori Excel ali CSV v Markdown tabelo.</p>
+  <p class="desc">Pretvori Excel ali CSV v Markdown tabelo, ki jo AI odlično razume.</p>
   <div class="dropzone" data-input="xlsxInput">
     <div class="big">&#128202;</div>
-    <p><b>Tapni in izberi .xlsx / .csv</b></p>
+    <p><b>Izberi Excel ali CSV</b></p>
   </div>
   <input type="file" id="xlsxInput" accept=".xlsx,.xls,.csv">
   <div class="status" id="xlsxStatus"></div>
@@ -275,7 +308,7 @@
 
 <!-- ===================== IMG ===================== -->
 <section id="tab-img">
-  <p class="desc">Pomanjša in stisne fotografijo pred nalaganjem.</p>
+  <p class="desc">Pomanjša in stisne fotografijo pred nalaganjem (npr. z 8 MB na ~200 KB) — hitreje in manj porabe limitov.</p>
   <div class="optrow">
     Največja stranica:
     <select id="imgMaxDim">
@@ -296,7 +329,7 @@
   </div>
   <input type="file" id="imgInput" accept="image/*">
   <div class="status" id="imgStatus"></div>
-  <img id="imgPreview" alt="Predogled">
+  <img id="imgPreview" alt="Predogled stisnjene slike">
   <div class="sizecompare" id="imgCompare">
     <span>prej: <b id="imgBefore"></b></span>
     <span>&#8594;</span>
@@ -309,7 +342,7 @@
 
 <!-- ===================== HEIC ===================== -->
 <section id="tab-heic">
-  <p class="desc">Pretvori HEIC fotografije v JPG.</p>
+  <p class="desc">Pretvori HEIC/HEIF fotografije (iPhone) v JPG. Lahko izbereš več datotek naenkrat.</p>
   <div class="dropzone" data-input="heicInput">
     <div class="big">&#127746;</div>
     <p><b>Tapni in izberi HEIC datoteke</b></p>
@@ -325,22 +358,22 @@
 
 <!-- ===================== PDF STISKANJE ===================== -->
 <section id="tab-pdfmin">
-  <p class="desc">Zmanjša velikost PDF-ja.</p>
+  <p class="desc">Zmanjša velikost PDF-ja (npr. skeni, fotografirani dokumenti) za pošiljanje po e-pošti ali nalaganje v sisteme z omejitvijo velikosti.</p>
   <div class="optrow">
     Stopnja:
     <select id="pdfminLevel">
-      <option value="low">Močno</option>
+      <option value="low">Močno (najmanjša datoteka)</option>
       <option value="mid" selected>Uravnoteženo</option>
-      <option value="high">Rahlo</option>
+      <option value="high">Rahlo (najboljša kakovost)</option>
     </select>
   </div>
   <label class="optrow" style="cursor:pointer">
     <input type="checkbox" id="pdfminGray" style="width:18px;height:18px;accent-color:var(--accent)">
-    Črno-belo
+    Črno-belo (še manjše, primerno za besedilne dokumente)
   </label>
   <div class="dropzone" data-input="pdfminInput">
     <div class="big">&#128476;</div>
-    <p><b>Tapni in izberi PDF</b></p>
+    <p><b>Izberi PDF</b></p>
   </div>
   <input type="file" id="pdfminInput" accept="application/pdf">
   <div class="progwrap" id="pdfminProgW"><div class="progbar" id="pdfminProgB"></div></div>
@@ -355,6 +388,41 @@
     <button class="btn-save" id="pdfminShareBtn">Deli &#8230;</button>
   </div>
 </section>
+
+<!-- ===================== ZDRUŽI / RAZDELI ===================== -->
+<section id="tab-merge">
+  <p class="desc">Naloži enega ali več PDF-jev. Tapni stran, da jo izbereš ali odstraniš — shranijo se samo izbrane strani, v prikazanem vrstnem redu.</p>
+  <div class="pg-bar" id="pgBar" style="display:none">
+    <span id="pgCount"></span>
+    <span class="pg-bar-btns">
+      <button id="pgAll">Vse</button>
+      <button id="pgNone">Nobene</button>
+    </span>
+  </div>
+  <div class="pg-grid" id="pgGrid"></div>
+  <div class="dropzone" data-input="mergeInput" id="mergeDrop">
+    <div class="big">&#128196;</div>
+    <p><b id="mergeLabel">Izberi PDF</b><br><span id="mergeSub">lahko več naenkrat</span></p>
+  </div>
+  <input type="file" id="mergeInput" accept="application/pdf" multiple>
+  <div class="status" id="mergeStatus"></div>
+  <div class="btnrow" id="mergeBtns" style="display:none">
+    <button class="btn-copy" id="mergeGo">Shrani PDF</button>
+    <button class="btn-save" id="mergeShare">Deli &#8230;</button>
+  </div>
+</section>
+
+<nav id="tabs">
+  <button data-tab="pdf" class="active"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>PDF</button>
+  <button data-tab="ocr"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 10h8M8 14h5"/></svg>OCR</button>
+  <button data-tab="docx"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8.5 12l1.5 5 2-4 2 4 1.5-5"/></svg>Word</button>
+  <button data-tab="xlsx"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M4 15h16M10 4v16"/></svg>Excel</button>
+  <button data-tab="img"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>Slika</button>
+  <button data-tab="heic"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.2"/></svg>HEIC</button>
+  <button data-tab="pdfmin"><svg viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l6-6M4 20l6-6"/></svg>Stisni</button>
+  <button data-tab="merge"><svg viewBox="0 0 24 24"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 21H6a2 2 0 0 1-2-2V7"/></svg>Uredi</button>
+</nav>
+
 <script>
 /* ---------- pomožne funkcije ---------- */
 const loadedScripts = {};
@@ -364,7 +432,7 @@ function loadScript(url) {
     const s = document.createElement("script");
     s.src = url;
     s.onload = res;
-    s.onerror = () => rej(new Error("Napaka pri nalaganju: " + url));
+    s.onerror = () => rej(new Error("Knjižnice ni bilo mogoče naložiti (preveri internet): " + url));
     document.head.appendChild(s);
   });
   return loadedScripts[url];
@@ -381,21 +449,19 @@ function fmtSize(bytes) {
 }
 let lastNames = {};
 
-function downloadBlob(blob, name) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-}
-
 /* zavihki */
+const TAB_TITLES = {
+  pdf: "PDF v besedilo", ocr: "Prepoznaj besedilo", docx: "Word v besedilo",
+  xlsx: "Excel v tabelo", img: "Pomanjšaj sliko", heic: "HEIC v JPG", pdfmin: "Stisni PDF", merge: "Združi / razdeli PDF"
+};
 document.querySelectorAll("#tabs button").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll("#tabs button").forEach(b => b.classList.remove("active"));
     document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
     btn.classList.add("active");
     el("tab-" + btn.dataset.tab).classList.add("active");
+    el("pageTitle").textContent = TAB_TITLES[btn.dataset.tab] || "";
+    window.scrollTo(0, 0);
   });
 });
 
@@ -422,312 +488,218 @@ document.querySelectorAll("[data-save]").forEach(btn => {
   btn.addEventListener("click", () => {
     const ta = el(btn.dataset.save);
     const blob = new Blob([ta.value], { type: "text/plain;charset=utf-8" });
-    downloadBlob(blob, (lastNames[btn.dataset.save] || "besedilo") + ".txt");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (lastNames[btn.dataset.save] || "besedilo") + ".txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
   });
 });
 
+/* ---------- PDF ---------- */
 const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-const JSPDF = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-
 async function initPdfjs() {
   await loadScript(PDFJS);
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 }
 
-/* ---------- OČISTI POLICO (ODSTRANI NEVELJAVEN DOKUMENT) ---------- */
-let cleanedPdfBlob = null;
-let cleanedPdfName = "polica-veljavna.pdf";
-let cleanedPrintImages = [];
+async function extractPdfText(pdf, statusId, progId) {
+  const total = pdf.numPages;
+  let pages = [];
+  for (let i = 1; i <= total; i++) {
+    setStatus(statusId, "Stran " + i + " / " + total);
+    if (progId) el(progId).style.width = Math.round(i / total * 100) + "%";
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    let lines = [], lastY = null, line = [];
+    for (const item of content.items) {
+      if (!item.str) continue;
+      const y = item.transform[5];
+      if (lastY !== null && Math.abs(y - lastY) > 2) {
+        if (line.length) lines.push(line.join(" "));
+        line = [];
+      }
+      line.push(item.str);
+      lastY = y;
+    }
+    if (line.length) lines.push(line.join(" "));
+    pages.push("===== STRAN " + i + " =====\n" + lines.join("\n").replace(/[ \t]+/g, " ").trim());
+  }
+  return pages.join("\n\n");
+}
 
-el("policaInput").addEventListener("change", async () => {
-  const file = el("policaInput").files[0];
+el("pdfInput").addEventListener("change", async () => {
+  const file = el("pdfInput").files[0];
   if (!file) return;
-  cleanedPdfName = file.name.replace(/\.pdf$/i, "") + "-veljavna.pdf";
-  cleanedPdfBlob = null;
-  cleanedPrintImages = [];
-
-  el("policaBtns").style.display = "none";
-  el("policaProgW").style.display = "block";
-  el("policaProgB").style.width = "0%";
-  setStatus("policaStatus", "Nalagam polico ...");
-
+  lastNames.pdfOut = file.name.replace(/\.pdf$/i, "");
+  el("pdfResult").style.display = "none";
+  el("pdfProgW").style.display = "block";
+  el("pdfProgB").style.width = "0%";
+  setStatus("pdfStatus", "Berem PDF ...");
   try {
     await initPdfjs();
-    await loadScript(JSPDF);
-
     const buf = await file.arrayBuffer();
-    const pdfDoc = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
-    const totalPages = pdfDoc.numPages;
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const text = await extractPdfText(pdf, "pdfStatus", "pdfProgB");
+    el("pdfProgW").style.display = "none";
+    if (!text.replace(/=+ STRAN \d+ =+/g, "").trim()) {
+      setStatus("pdfStatus", "PDF ne vsebuje besedila — verjetno je skeniran. Uporabi zavihek OCR.", true);
+      return;
+    }
+    el("pdfOut").value = text;
+    el("pdfName").textContent = file.name;
+    el("pdfPages").textContent = pdf.numPages;
+    el("pdfChars").textContent = text.length.toLocaleString("sl-SI");
+    el("pdfResult").style.display = "flex";
+    setStatus("pdfStatus", "Končano.");
+  } catch (err) {
+    el("pdfProgW").style.display = "none";
+    setStatus("pdfStatus", "Napaka: " + (err.message || err), true);
+  }
+  el("pdfInput").value = "";
+});
 
-    const { jsPDF } = window.jspdf;
-    let outPdf = null;
-
-    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-      setStatus("policaStatus", `Čistim stran ${pageNum} / ${totalPages} ...`);
-      el("policaProgB").style.width = Math.round((pageNum / totalPages) * 100) + "%";
-
-      const page = await pdfDoc.getPage(pageNum);
-      const scale = 2.4;
-      const viewport = page.getViewport({ scale });
-
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(viewport.width);
-      canvas.height = Math.round(viewport.height);
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      await page.render({ canvasContext: ctx, viewport }).promise;
-
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = imgData.data;
-
-      const logoMaxX = Math.floor(canvas.width * 0.36);
-      const logoMaxY = Math.floor(canvas.height * 0.15);
-
-      for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
-          if (x < logoMaxX && y < logoMaxY) continue;
-
-          const idx = (y * canvas.width + x) * 4;
-          const r = d[idx];
-          const g = d[idx + 1];
-          const b = d[idx + 2];
-
-          if (r > 90 && (r - g) > 22 && (r - b) > 22) {
-            d[idx] = 255;
-            d[idx + 1] = 255;
-            d[idx + 2] = 255;
-          }
-        }
+/* ---------- OCR ---------- */
+const TESS = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js";
+let ocrWorker = null;
+async function getOcrWorker(statusId) {
+  await loadScript(TESS);
+  if (ocrWorker) return ocrWorker;
+  setStatus(statusId, "Nalagam jezikovne podatke (prvič ~15 MB) ...");
+  ocrWorker = await Tesseract.createWorker("slv+eng", 1, {
+    logger: m => {
+      if (m.status === "recognizing text") {
+        el("ocrProgB").style.width = Math.round(m.progress * 100) + "%";
       }
+    }
+  });
+  return ocrWorker;
+}
 
-      ctx.putImageData(imgData, 0, 0);
+el("ocrInput").addEventListener("change", async () => {
+  const file = el("ocrInput").files[0];
+  if (!file) return;
+  lastNames.ocrOut = file.name.replace(/\.[^.]+$/, "");
+  el("ocrResult").style.display = "none";
+  el("ocrProgW").style.display = "block";
+  el("ocrProgB").style.width = "0%";
+  try {
+    const worker = await getOcrWorker("ocrStatus");
+    let fullText = "";
 
-      const pageImg = canvas.toDataURL("image/jpeg", 0.94);
-      cleanedPrintImages.push(pageImg);
-
-      const ptW = viewport.width / scale;
-      const ptH = viewport.height / scale;
-      const orientation = ptW > ptH ? "l" : "p";
-
-      if (pageNum === 1) {
-        outPdf = new jsPDF(orientation, "pt", [ptW, ptH]);
-      } else {
-        outPdf.addPage([ptW, ptH], orientation);
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      await initPdfjs();
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        setStatus("ocrStatus", "OCR strani " + i + " / " + pdf.numPages + " (traja nekaj sekund) ...");
+        el("ocrProgB").style.width = "0%";
+        const page = await pdf.getPage(i);
+        const vp = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+        canvas.width = vp.width; canvas.height = vp.height;
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+        const { data } = await worker.recognize(canvas);
+        fullText += "===== STRAN " + i + " =====\n" + data.text.trim() + "\n\n";
       }
-      outPdf.addImage(pageImg, "JPEG", 0, 0, ptW, ptH);
-      canvas.width = canvas.height = 0;
+    } else {
+      setStatus("ocrStatus", "Prepoznavam besedilo (traja nekaj sekund) ...");
+      const { data } = await worker.recognize(file);
+      fullText = data.text.trim();
     }
 
-    cleanedPdfBlob = outPdf.output("blob");
-    el("policaProgW").style.display = "none";
-    el("policaBtns").style.display = "flex";
-    setStatus("policaStatus", `Polica je uspešno očiščena!\nBelo ozadje je nastavljeno, dokument je pripravljen za tisk.`);
-
+    el("ocrProgW").style.display = "none";
+    if (!fullText.trim()) {
+      setStatus("ocrStatus", "Besedila ni bilo mogoče prepoznati. Poskusi z ostrejšo/svetlejšo sliko.", true);
+      return;
+    }
+    el("ocrOut").value = fullText.trim();
+    el("ocrName").textContent = file.name;
+    el("ocrChars").textContent = fullText.length.toLocaleString("sl-SI");
+    el("ocrResult").style.display = "flex";
+        setStatus("ocrStatus", "Končano. Preveri besedilo — OCR lahko naredi napake, zlasti pri šumnikih.");
   } catch (err) {
-    el("policaProgW").style.display = "none";
-    setStatus("policaStatus", "Napaka: " + (err.message || err), true);
+    el("ocrProgW").style.display = "none";
+    setStatus("ocrStatus", "Napaka: " + (err.message || err), true);
   }
-  el("policaInput").value = "";
+  el("ocrInput").value = "";
 });
 
-el("policaPrintBtn").addEventListener("click", () => {
-  if (!cleanedPrintImages.length) return;
-  const printWin = window.open("", "_blank");
-  let html = `<html><head><title>Natisni polico</title><style>
-    @page { size: A4; margin: 0; }
-    body { margin: 0; padding: 0; background: #fff; }
-    img { width: 100%; height: auto; display: block; page-break-after: always; }
-  </style></head><body>`;
+/* ---------- DOCX ---------- */
+const MAMMOTH = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+el("docxInput").addEventListener("change", async () => {
+  const file = el("docxInput").files[0];
+  if (!file) return;
+  lastNames.docxOut = file.name.replace(/\.docx$/i, "");
+  el("docxResult").style.display = "none";
+  setStatus("docxStatus", "Berem dokument ...");
+  try {
+    await loadScript(MAMMOTH);
+    const buf = await file.arrayBuffer();
+    const { value } = await mammoth.extractRawText({ arrayBuffer: buf });
+    const text = value.replace(/\n{3,}/g, "\n\n").trim();
+    if (!text) { setStatus("docxStatus", "Dokument je prazen ali ga ni bilo mogoče prebrati.", true); return; }
+    el("docxOut").value = text;
+    el("docxName").textContent = file.name;
+    el("docxChars").textContent = text.length.toLocaleString("sl-SI");
+    el("docxResult").style.display = "flex";
+    setStatus("docxStatus", "Končano.");
+  } catch (err) {
+    setStatus("docxStatus", "Napaka: " + (err.message || err) + " (star .doc format ni podprt, samo .docx)", true);
+  }
+  el("docxInput").value = "";
+});
 
-  cleanedPrintImages.forEach(src => {
-    html += `<img src="${src}">`;
+/* ---------- XLSX / CSV ---------- */
+const SHEETJS = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+function sheetToMarkdown(rows) {
+  if (!rows.length) return "";
+  const width = Math.max(...rows.map(r => r.length));
+  const norm = rows.map(r => {
+    const out = [];
+    for (let i = 0; i < width; i++) {
+      out.push(String(r[i] ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ").trim());
+    }
+    return out;
   });
-
-  html += `<script>window.onload = function() { window.print(); };<\/script></body></html>`;
-  printWin.document.write(html);
-  printWin.document.close();
+  const md = [];
+  md.push("| " + norm[0].join(" | ") + " |");
+  md.push("| " + norm[0].map(() => "---").join(" | ") + " |");
+  for (let i = 1; i < norm.length; i++) md.push("| " + norm[i].join(" | ") + " |");
+  return md.join("\n");
+}
+el("xlsxInput").addEventListener("change", async () => {
+  const file = el("xlsxInput").files[0];
+  if (!file) return;
+  lastNames.xlsxOut = file.name.replace(/\.[^.]+$/, "");
+  el("xlsxResult").style.display = "none";
+  setStatus("xlsxStatus", "Berem tabelo ...");
+  try {
+    await loadScript(SHEETJS);
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    let parts = [];
+    for (const name of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "" });
+      const trimmed = rows.filter(r => r.some(c => String(c).trim() !== ""));
+      if (!trimmed.length) continue;
+      const table = sheetToMarkdown(trimmed);
+      parts.push(wb.SheetNames.length > 1 ? "## List: " + name + "\n\n" + table : table);
+    }
+    const text = parts.join("\n\n");
+    if (!text) { setStatus("xlsxStatus", "Datoteka ne vsebuje podatkov.", true); return; }
+    el("xlsxOut").value = text;
+    el("xlsxName").textContent = file.name;
+    el("xlsxSheets").textContent = wb.SheetNames.length;
+    el("xlsxChars").textContent = text.length.toLocaleString("sl-SI");
+    el("xlsxResult").style.display = "flex";
+    setStatus("xlsxStatus", "Končano.");
+  } catch (err) {
+    setStatus("xlsxStatus", "Napaka: " + (err.message || err), true);
+  }
+  el("xlsxInput").value = "";
 });
-
-el("policaSaveBtn").addEventListener("click", () => {
-  if (cleanedPdfBlob) downloadBlob(cleanedPdfBlob, cleanedPdfName);
-});
-
-el("policaShareBtn").addEventListener("click", async () => {
-  if (!cleanedPdfBlob) return;
-  const f = new File([cleanedPdfBlob], cleanedPdfName, { type: "application/pdf" });
-  if (navigator.canShare && navigator.canShare({ files: [f] })) {
-    try { await navigator.share({ files: [f], title: cleanedPdfName }); } catch (e) {}
-  } else {
-    downloadBlob(cleanedPdfBlob, cleanedPdfName);
-    setStatus("policaStatus", "Deljenje ni podprto - polica je shranjena v Prenose.");
-  }
-});
-  <!DOCTYPE html>
-<html lang="sl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#14181d">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<title>AI orodjarna</title>
-<style>
-  :root {
-    --bg: #14181d;
-    --panel: #1d232b;
-    --panel-2: #232b35;
-    --ink: #e8edf2;
-    --ink-dim: #8b98a5;
-    --accent: #4fd1a5;
-    --accent-ink: #0c1512;
-    --line: #2e3844;
-    --err: #f28b82;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; }
-  body {
-    background: var(--bg);
-    color: var(--ink);
-    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-    padding: 14px;
-    gap: 12px;
-  }
-  header { display: flex; align-items: baseline; gap: 10px; }
-  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.02em; }
-  header span { color: var(--ink-dim); font-size: 0.75rem; }
-
-  nav {
-    display: flex; gap: 6px; overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
-  }
-  nav button {
-    flex: 0 0 auto;
-    background: var(--panel);
-    color: var(--ink-dim);
-    border: 1px solid var(--line);
-    border-radius: 20px;
-    padding: 9px 15px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  nav button.active {
-    background: var(--accent);
-    color: var(--accent-ink);
-    border-color: var(--accent);
-  }
-
-  section { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
-  section.active { display: flex; }
-
-  .desc { color: var(--ink-dim); font-size: 0.8rem; line-height: 1.45; }
-
-  .dropzone {
-    border: 2px dashed var(--line);
-    border-radius: 14px;
-    background: var(--panel);
-    padding: 26px 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .15s, background .15s;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .dropzone:active { border-color: var(--accent); background: var(--panel-2); }
-  .dropzone .big { font-size: 1.7rem; margin-bottom: 6px; }
-  .dropzone p { color: var(--ink-dim); font-size: 0.85rem; line-height: 1.4; }
-  .dropzone p b { color: var(--ink); font-weight: 600; }
-  input[type=file] { display: none; }
-
-  .status { font-size: 0.82rem; color: var(--ink-dim); min-height: 1.2em; white-space: pre-line; }
-  .status.error { color: var(--err); }
-
-  .progwrap { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; display: none; }
-  .progbar { height: 100%; width: 0%; background: var(--accent); transition: width .2s; }
-
-  .result { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
-  .meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.78rem; color: var(--ink-dim); }
-  .meta b { color: var(--ink); font-weight: 600; }
-
-  textarea.out {
-    flex: 1;
-    min-height: 160px;
-    width: 100%;
-    background: var(--panel);
-    color: var(--ink);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 12px;
-    font-family: monospace;
-    font-size: 0.76rem;
-    line-height: 1.5;
-    resize: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  textarea.out:focus { outline: 1px solid var(--accent); }
-
-  .btnrow { display: flex; gap: 10px; }
-  .btnrow button {
-    flex: 1;
-    border: none;
-    border-radius: 12px;
-    padding: 13px 10px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btnrow button:active { filter: brightness(1.15); }
-  .btn-copy { background: var(--accent); color: var(--accent-ink); }
-  .btn-save { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line) !important; }
-
-  .optrow {
-    display: flex; gap: 10px; align-items: center;
-    font-size: 0.82rem; color: var(--ink-dim); flex-wrap: wrap;
-  }
-  .optrow select {
-    background: var(--panel-2); color: var(--ink);
-    border: 1px solid var(--line); border-radius: 8px;
-    padding: 8px 10px; font-size: 0.85rem;
-  }
-
-  #imgPreview {
-    max-width: 100%; max-height: 220px;
-    border-radius: 12px; border: 1px solid var(--line);
-    align-self: center; display: none;
-  }
-  .sizecompare {
-    display: none; justify-content: center; gap: 16px;
-    font-size: 0.85rem; color: var(--ink-dim);
-  }
-  .sizecompare b { color: var(--accent); }
-</style>
-</head>
-<body>
-
-<header>
-  <h1>AI orodjarna</h1>
-  <span>vse ostane na telefonu</span>
-</header>
-
-<nav id="tabs">
-  <button data-tab="polica" class="active">Očisti polico</button>
-  <button data-tab="pdf">PDF</button>
-  <button data-tab="ocr">OCR</button>
-  <button data-tab="docx">Word</button>
-  <button data-tab="xlsx">Excel</button>
-  <button data-tab="img">Slika</button>
-  <button data-tab="heic">HEIC</button>
-  <button data-tab="pdfmin">PDF manjši</button>
-</nav>
 /* ---------- SLIKA ---------- */
 let compressedBlob = null, compressedName = "slika";
 el("imgInput").addEventListener("change", async () => {
@@ -765,12 +737,25 @@ el("imgInput").addEventListener("change", async () => {
   el("imgInput").value = "";
 });
 el("imgSaveBtn").addEventListener("click", () => {
-  if (compressedBlob) downloadBlob(compressedBlob, compressedName);
+  if (!compressedBlob) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(compressedBlob);
+  a.download = compressedName;
+  a.click();
+  URL.revokeObjectURL(a.href);
 });
 
 /* ---------- HEIC ---------- */
 const HEIC2ANY = "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js";
 let heicResults = [];
+
+function downloadBlob(blob, name) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
 
 el("heicInput").addEventListener("change", async () => {
   const files = Array.from(el("heicInput").files);
@@ -783,14 +768,15 @@ el("heicInput").addEventListener("change", async () => {
   setStatus("heicStatus", "Nalagam pretvornik ...");
   try {
     await loadScript(HEIC2ANY);
-    let ok = 0;
+    let ok = 0, fail = 0;
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       setStatus("heicStatus", "Pretvarjam " + (i + 1) + " / " + files.length + " ...");
       try {
-        const jpg = await heic2any({ blob: f, toType: "image/jpeg", quality: 0.9 });
+        const isHeic = /\.(heic|heif)$/i.test(f.name) || /hei[cf]/i.test(f.type);
+        const jpg = isHeic ? await heic2any({ blob: f, toType: "image/jpeg", quality: 0.9 }) : f;
         const blob = Array.isArray(jpg) ? jpg[0] : jpg;
-        const name = f.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+        const name = f.name.replace(/\.[^.]+$/, "") + ".jpg";
         heicResults.push({ blob, name });
         ok++;
 
@@ -803,12 +789,19 @@ el("heicInput").addEventListener("change", async () => {
         btn.addEventListener("click", () => downloadBlob(blob, name));
         row.appendChild(btn);
         el("heicList").appendChild(row);
-      } catch (e) {}
+      } catch (e) {
+        fail++;
+        console.error(f.name, e);
+      }
       el("heicProgB").style.width = Math.round((i + 1) / files.length * 100) + "%";
     }
     el("heicProgW").style.display = "none";
-    setStatus("heicStatus", "Pretvorjeno: " + ok + ".");
-    if (ok > 1) el("heicBtns").style.display = "flex";
+    if (ok === 0) {
+      setStatus("heicStatus", "Pretvorba ni uspela — preveri, da so datoteke res HEIC/HEIF.", true);
+    } else {
+      setStatus("heicStatus", "Pretvorjeno: " + ok + (fail ? " (neuspešno: " + fail + ")" : "") + ".");
+      if (ok > 1) el("heicBtns").style.display = "flex";
+    }
   } catch (err) {
     el("heicProgW").style.display = "none";
     setStatus("heicStatus", "Napaka: " + (err.message || err), true);
@@ -822,7 +815,6 @@ el("heicAllBtn").addEventListener("click", async () => {
     await new Promise(res => setTimeout(res, 400));
   }
 });
-
 /* ---------- AI gumbi ---------- */
 function statusIdFor(outId) { return outId.replace("Out", "Status"); }
 
@@ -835,7 +827,7 @@ document.querySelectorAll("[data-ai]").forEach(btn => {
       window.open("https://claude.ai/new?q=" + encodeURIComponent(text), "_blank");
     } else {
       try { await navigator.clipboard.writeText(text); } catch {}
-      setStatus(sid, "Besedilo je preneseno v odložišče - v Claude ga samo prilepite.");
+      setStatus(sid, "Besedilo je predolgo za samodejni prenos, zato je kopirano - v Claude ga samo prilepi.");
       window.open("https://claude.ai/new", "_blank");
     }
   });
@@ -844,10 +836,13 @@ document.querySelectorAll("[data-ai]").forEach(btn => {
 document.querySelectorAll("[data-share]").forEach(btn => {
   btn.addEventListener("click", async () => {
     const ta = el(btn.dataset.share);
+    const sid = statusIdFor(btn.dataset.share);
     if (navigator.share) {
-      try { await navigator.share({ text: ta.value }); } catch (e) {}
+      try { await navigator.share({ text: ta.value }); }
+      catch (e) { /* uporabnik je preklical */ }
     } else {
       try { await navigator.clipboard.writeText(ta.value); } catch {}
+      setStatus(sid, "Deljenje ni podprto v tem brskalniku - besedilo je kopirano.");
     }
   });
 });
@@ -919,13 +914,13 @@ el("pdfminInput").addEventListener("change", async () => {
     el("pdfminCompare").style.display = "flex";
 
     if (bytes.length >= file.size) {
-      setStatus("pdfminStatus", "PDF je že optimalen.", true);
+      setStatus("pdfminStatus", "PDF je že optimalen - stisnjena verzija ne bi bila manjša. Poskusi 'Močno' ali 'Črno-belo'.", true);
       return;
     }
     pdfminBlob = new Blob([bytes], { type: "application/pdf" });
     el("pdfminBtns").style.display = "flex";
     const pct = Math.round((1 - bytes.length / file.size) * 100);
-    setStatus("pdfminStatus", "Končano - manjši za " + pct + " %.");
+    setStatus("pdfminStatus", "Končano - manjši za " + pct + " %. Pozor: besedila v novem PDF-ju ni mogoče označiti/kopirati.");
   } catch (err) {
     el("pdfminProgW").style.display = "none";
     setStatus("pdfminStatus", "Napaka: " + (err.message || err), true);
@@ -944,10 +939,181 @@ el("pdfminShareBtn").addEventListener("click", async () => {
     try { await navigator.share({ files: [f], title: pdfminName }); } catch (e) {}
   } else {
     downloadBlob(pdfminBlob, pdfminName);
+    setStatus("pdfminStatus", "Deljenje datotek ni podprto - PDF je shranjen v Prenose.");
   }
 });
 
-/* ---------- service worker ---------- */
+/* ---------- ZDRUŽI / RAZDELI ---------- */
+let mDocs = [];   // { id, name, bytes }
+let mPages = [];  // { docId, idx, sel, el }
+let mDocSeq = 0;
+
+function mUpdate() {
+  const sel = mPages.filter(p => p.sel).length;
+  const has = mPages.length > 0;
+  el("pgBar").style.display = has ? "flex" : "none";
+  el("pgCount").innerHTML = "Izbranih <b>" + sel + "</b> od " + mPages.length + " strani";
+  el("mergeBtns").style.display = sel > 0 ? "flex" : "none";
+  el("mergeGo").textContent = "Shrani PDF (" + sel + " str.)";
+  el("mergeDrop").classList.toggle("compact", has);
+  el("mergeLabel").textContent = has ? "Dodaj še PDF" : "Izberi PDF";
+  // zaporedne številke izbranih strani v novem PDF-ju
+  let k = 0;
+  mPages.forEach(p => {
+    p.el.classList.toggle("off", !p.sel);
+    p.el.querySelector(".chk").textContent = p.sel ? (++k) : "";
+  });
+}
+
+function mRenderGrid() {
+  const g = el("pgGrid");
+  g.innerHTML = "";
+  for (const d of mDocs) {
+    if (mDocs.length > 1) {
+      const hdr = document.createElement("div");
+      hdr.className = "pg-file";
+      const s = document.createElement("span"); s.textContent = d.name; hdr.appendChild(s);
+      const rm = document.createElement("button"); rm.textContent = "Odstrani";
+      rm.addEventListener("click", () => {
+        mDocs = mDocs.filter(x => x.id !== d.id);
+        mPages = mPages.filter(p => p.docId !== d.id);
+        mRenderGrid();
+      });
+      hdr.appendChild(rm);
+      g.appendChild(hdr);
+    }
+    mPages.filter(p => p.docId === d.id).forEach(p => g.appendChild(p.el));
+  }
+  mUpdate();
+}
+
+el("pgAll").addEventListener("click", () => { mPages.forEach(p => p.sel = true); mUpdate(); });
+el("pgNone").addEventListener("click", () => { mPages.forEach(p => p.sel = false); mUpdate(); });
+
+el("mergeInput").addEventListener("change", async () => {
+  const files = Array.from(el("mergeInput").files);
+  el("mergeInput").value = "";
+  if (!files.length) return;
+  setStatus("mergeStatus", "Nalagam ...");
+  try {
+    await initPdfjs();
+    await loadScript(PDFLIB);
+  } catch (err) { setStatus("mergeStatus", "Napaka: " + (err.message || err), true); return; }
+
+  for (const file of files) {
+    let bytes, pdf;
+    try {
+      bytes = await file.arrayBuffer();
+      await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true }); // preveri, da ga lahko zapišemo
+      pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+    } catch (e) {
+      setStatus("mergeStatus", "Datoteke " + file.name + " ni bilo mogoče odpreti (morda je zaščitena z geslom).", true);
+      continue;
+    }
+    const doc = { id: ++mDocSeq, name: file.name, bytes };
+    mDocs.push(doc);
+    const newPages = [];
+    for (let i = 0; i < pdf.numPages; i++) {
+      const tile = document.createElement("div");
+      tile.className = "pg loading";
+      tile.innerHTML = '<span class="chk"></span><span class="num">' + (i + 1) + '</span>';
+      const page = { docId: doc.id, idx: i, sel: true, el: tile };
+      tile.addEventListener("click", () => { page.sel = !page.sel; mUpdate(); });
+      mPages.push(page); newPages.push(page);
+    }
+    mRenderGrid();
+    // sličice izrišemo eno za drugo, da telefon ne zmrzne
+    for (const p of newPages) {
+      try {
+        setStatus("mergeStatus", "Pripravljam predogled " + (p.idx + 1) + " / " + pdf.numPages + " ...");
+        const pg = await pdf.getPage(p.idx + 1);
+        const vp0 = pg.getViewport({ scale: 1 });
+        const vp = pg.getViewport({ scale: 220 / vp0.width });
+        const c = document.createElement("canvas");
+        c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+        await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+        p.el.insertBefore(c, p.el.firstChild);
+      } catch (e) { /* stran brez predogleda ostane prazna */ }
+      p.el.classList.remove("loading");
+    }
+  }
+  setStatus("mergeStatus", mPages.length ? "Tapni stran, da jo izbereš ali odstraniš." : "");
+});
+
+function mName() {
+  const base = mDocs[0].name.replace(/\.pdf$/i, "");
+  return base + (mDocs.length > 1 ? "-zdruzeno.pdf" : "-izbrano.pdf");
+}
+
+async function mBuild() {
+  const out = await PDFLib.PDFDocument.create();
+  const loaded = {};
+  for (const p of mPages) {
+    if (!p.sel) continue;
+    if (!loaded[p.docId]) {
+      const d = mDocs.find(x => x.id === p.docId);
+      loaded[p.docId] = await PDFLib.PDFDocument.load(d.bytes, { ignoreEncryption: true });
+    }
+    const [cp] = await out.copyPages(loaded[p.docId], [p.idx]);
+    out.addPage(cp);
+  }
+  return out.save();
+}
+
+el("mergeGo").addEventListener("click", async () => {
+  setStatus("mergeStatus", "Shranjujem ...");
+  try {
+    const bytes = await mBuild();
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), mName());
+    setStatus("mergeStatus", "Shranjeno v Prenose (" + fmtSize(bytes.length) + ").");
+  } catch (err) { setStatus("mergeStatus", "Napaka: " + (err.message || err), true); }
+});
+el("mergeShare").addEventListener("click", async () => {
+  setStatus("mergeStatus", "Pripravljam ...");
+  try {
+    const bytes = await mBuild();
+    setStatus("mergeStatus", "");
+    await sharePdf(bytes, mName(), "mergeStatus");
+  } catch (err) { setStatus("mergeStatus", "Napaka: " + (err.message || err), true); }
+});
+
+async function sharePdf(bytes, name, statusId) {
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const f = new File([blob], name, { type: "application/pdf" });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: name }); } catch (e) {}
+  } else {
+    downloadBlob(blob, name);
+    setStatus(statusId, "Deljenje ni podprto - PDF je shranjen v Prenose.");
+  }
+}
+
+/* ---------- Galerija + datoteke ---------- */
+[["imgInput", "*/*"], ["heicInput", "*/*"], ["ocrInput", "image/*,application/pdf"]].forEach(([id, fileAccept]) => {
+  const inp = el(id);
+  const dz = document.querySelector('[data-input="' + id + '"]');
+  inp.setAttribute("accept", "image/*");
+  dz.querySelector("b").textContent = "Izberi sliko";
+  const alt = document.createElement("input");
+  alt.type = "file";
+  alt.accept = fileAccept;
+  alt.multiple = inp.multiple;
+  alt.style.display = "none";
+  alt.addEventListener("change", () => {
+    const dt = new DataTransfer();
+    for (const f of alt.files) dt.items.add(f);
+    inp.files = dt.files;
+    inp.dispatchEvent(new Event("change"));
+    alt.value = "";
+  });
+  const btn = document.createElement("button");
+  btn.textContent = "ali izberi iz upravitelja datotek";
+  btn.className = "btn-files";
+  btn.addEventListener("click", () => alt.click());
+  dz.after(btn);
+  btn.after(alt);
+});
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }

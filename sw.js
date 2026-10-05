@@ -1,4 +1,4 @@
-const CACHE = "pdf2txt-v4";
+const CACHE = "pdf2txt-v5";
 const ASSETS = [
   "./",
   "./index.html",

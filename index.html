@@ -163,6 +163,22 @@
     font-size: 0.88rem; color: var(--ink-dim);
   }
   .sizecompare b { color: var(--accent); }
+
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; }
+  .seg button { flex: 1; background: none; border: none; color: var(--ink-dim); padding: 10px; border-radius: 9px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .seg button.on { background: var(--panel-2); color: var(--ink); }
+  .mode { display: none; flex-direction: column; gap: 12px; }
+  .mode.on { display: flex; }
+  .flist { display: flex; flex-direction: column; gap: 6px; }
+  .fitem { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 12px; font-size: 0.82rem; }
+  .fitem .n { color: var(--accent); font-weight: 700; width: 16px; }
+  .fitem .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fitem .pg { color: var(--ink-dim); font-size: 0.75rem; }
+  .fitem button { background: var(--panel-2); color: var(--ink); border: none; border-radius: 8px; width: 34px; height: 34px; font-size: 0.95rem; cursor: pointer; }
+  .fitem button:disabled { opacity: 0.3; }
+  .pages-in { width: 100%; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 13px 12px; font-size: 1rem; }
+  .pages-in:focus { outline: 1px solid var(--accent); }
+  .hint { color: var(--ink-dim); font-size: 0.76rem; }
 </style>
 </head>
 <body>
@@ -350,6 +366,46 @@
   </div>
 </section>
 
+<!-- ===================== ZDRUŽI / RAZDELI ===================== -->
+<section id="tab-merge">
+  <p class="desc">Združi več PDF-jev v enega ali izreži samo strani, ki jih rabiš. Strani ostanejo nespremenjene — besedilo je še vedno mogoče označiti.</p>
+  <div class="seg" id="mergeSeg">
+    <button data-mode="join" class="on">Združi</button>
+    <button data-mode="split">Razdeli</button>
+  </div>
+
+  <div class="mode on" id="mode-join">
+    <div class="flist" id="joinList"></div>
+    <div class="dropzone" data-input="joinInput">
+      <div class="big">&#128196;</div>
+      <p><b id="joinLabel">Izberi PDF-je</b><br>lahko več naenkrat</p>
+    </div>
+    <input type="file" id="joinInput" accept="application/pdf" multiple>
+    <div class="status" id="joinStatus"></div>
+    <div class="btnrow" id="joinBtns" style="display:none">
+      <button class="btn-copy" id="joinGo">Združi in shrani</button>
+      <button class="btn-save" id="joinShare">Deli &#8230;</button>
+    </div>
+  </div>
+
+  <div class="mode" id="mode-split">
+    <div class="dropzone" data-input="splitInput">
+      <div class="big">&#128196;</div>
+      <p><b>Izberi PDF</b></p>
+    </div>
+    <input type="file" id="splitInput" accept="application/pdf">
+    <div class="status" id="splitStatus"></div>
+    <div id="splitForm" style="display:none;flex-direction:column;gap:8px">
+      <input class="pages-in" id="splitPages" inputmode="text" placeholder="npr. 1-3, 5, 8-10" autocomplete="off">
+      <span class="hint">Strani, ki jih želiš obdržati. Ločiš jih z vejico, obseg z vezajem.</span>
+    </div>
+    <div class="btnrow" id="splitBtns" style="display:none">
+      <button class="btn-copy" id="splitGo">Izreži in shrani</button>
+      <button class="btn-save" id="splitShare">Deli &#8230;</button>
+    </div>
+  </div>
+</section>
+
 <nav id="tabs">
   <button data-tab="pdf" class="active"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>PDF</button>
   <button data-tab="ocr"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 10h8M8 14h5"/></svg>OCR</button>
@@ -358,6 +414,7 @@
   <button data-tab="img"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>Slika</button>
   <button data-tab="heic"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.2"/></svg>HEIC</button>
   <button data-tab="pdfmin"><svg viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l6-6M4 20l6-6"/></svg>Stisni</button>
+  <button data-tab="merge"><svg viewBox="0 0 24 24"><rect x="8" y="3" width="12" height="14" rx="2"/><path d="M16 21H6a2 2 0 0 1-2-2V7"/></svg>Uredi</button>
 </nav>
 
 <script>
@@ -389,7 +446,7 @@ let lastNames = {};
 /* zavihki */
 const TAB_TITLES = {
   pdf: "PDF v besedilo", ocr: "Prepoznaj besedilo", docx: "Word v besedilo",
-  xlsx: "Excel v tabelo", img: "Pomanjšaj sliko", heic: "HEIC v JPG", pdfmin: "Stisni PDF"
+  xlsx: "Excel v tabelo", img: "Pomanjšaj sliko", heic: "HEIC v JPG", pdfmin: "Stisni PDF", merge: "Združi / razdeli PDF"
 };
 document.querySelectorAll("#tabs button").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -878,6 +935,164 @@ el("pdfminShareBtn").addEventListener("click", async () => {
     downloadBlob(pdfminBlob, pdfminName);
     setStatus("pdfminStatus", "Deljenje datotek ni podprto - PDF je shranjen v Prenose.");
   }
+});
+
+/* ---------- ZDRUŽI / RAZDELI ---------- */
+document.querySelectorAll("#mergeSeg button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("#mergeSeg button").forEach(x => x.classList.toggle("on", x === b));
+    el("mode-join").classList.toggle("on", b.dataset.mode === "join");
+    el("mode-split").classList.toggle("on", b.dataset.mode === "split");
+  });
+});
+
+async function sharePdf(bytes, name, statusId) {
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const f = new File([blob], name, { type: "application/pdf" });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: name }); } catch (e) {}
+  } else {
+    downloadBlob(blob, name);
+    setStatus(statusId, "Deljenje ni podprto - PDF je shranjen v Prenose.");
+  }
+}
+
+/* združi */
+let joinFiles = []; // { name, bytes, pages }
+function renderJoin() {
+  const list = el("joinList");
+  list.innerHTML = "";
+  joinFiles.forEach((f, i) => {
+    const row = document.createElement("div");
+    row.className = "fitem";
+    row.innerHTML = '<span class="n">' + (i + 1) + '</span><span class="nm"></span><span class="pg">' + f.pages + ' str.</span>';
+    row.querySelector(".nm").textContent = f.name;
+    const mk = (txt, dis, fn) => { const b = document.createElement("button"); b.textContent = txt; b.disabled = dis; b.addEventListener("click", fn); row.appendChild(b); };
+    mk("↑", i === 0, () => { [joinFiles[i - 1], joinFiles[i]] = [joinFiles[i], joinFiles[i - 1]]; renderJoin(); });
+    mk("↓", i === joinFiles.length - 1, () => { [joinFiles[i + 1], joinFiles[i]] = [joinFiles[i], joinFiles[i + 1]]; renderJoin(); });
+    mk("✕", false, () => { joinFiles.splice(i, 1); renderJoin(); });
+    list.appendChild(row);
+  });
+  el("joinBtns").style.display = joinFiles.length >= 2 ? "flex" : "none";
+  el("joinLabel").textContent = joinFiles.length ? "Dodaj še PDF" : "Izberi PDF-je";
+  const total = joinFiles.reduce((s, f) => s + f.pages, 0);
+  setStatus("joinStatus", joinFiles.length === 1 ? "Dodaj vsaj še en PDF." :
+    joinFiles.length ? joinFiles.length + " datotek, skupaj " + total + " strani. Vrstni red uredi s puščicami." : "");
+}
+
+el("joinInput").addEventListener("change", async () => {
+  const files = Array.from(el("joinInput").files);
+  el("joinInput").value = "";
+  if (!files.length) return;
+  setStatus("joinStatus", "Berem ...");
+  try {
+    await loadScript(PDFLIB);
+    for (const file of files) {
+      try {
+        const bytes = await file.arrayBuffer();
+        const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+        joinFiles.push({ name: file.name, bytes, pages: doc.getPageCount() });
+      } catch (e) {
+        setStatus("joinStatus", "Datoteke " + file.name + " ni bilo mogoče prebrati (morda je zaščitena z geslom).", true);
+      }
+    }
+    renderJoin();
+  } catch (err) {
+    setStatus("joinStatus", "Napaka: " + (err.message || err), true);
+  }
+});
+
+async function buildJoined() {
+  const out = await PDFLib.PDFDocument.create();
+  for (const f of joinFiles) {
+    const src = await PDFLib.PDFDocument.load(f.bytes, { ignoreEncryption: true });
+    const pages = await out.copyPages(src, src.getPageIndices());
+    pages.forEach(p => out.addPage(p));
+  }
+  return out.save();
+}
+function joinedName() { return joinFiles[0].name.replace(/\.pdf$/i, "") + "-zdruzeno.pdf"; }
+
+el("joinGo").addEventListener("click", async () => {
+  setStatus("joinStatus", "Združujem ...");
+  try {
+    const bytes = await buildJoined();
+    downloadBlob(new Blob([bytes], { type: "application/pdf" }), joinedName());
+    setStatus("joinStatus", "Shranjeno v Prenose (" + fmtSize(bytes.length) + ").");
+  } catch (err) { setStatus("joinStatus", "Napaka: " + (err.message || err), true); }
+});
+el("joinShare").addEventListener("click", async () => {
+  setStatus("joinStatus", "Združujem ...");
+  try {
+    const bytes = await buildJoined();
+    setStatus("joinStatus", "");
+    await sharePdf(bytes, joinedName(), "joinStatus");
+  } catch (err) { setStatus("joinStatus", "Napaka: " + (err.message || err), true); }
+});
+
+/* razdeli */
+let splitSrc = null; // { name, bytes, pages }
+
+function parsePages(str, max) {
+  const out = [];
+  const parts = str.split(/[,;\s]+/).filter(Boolean);
+  if (!parts.length) throw new Error("Vpiši strani, npr. 1-3, 5");
+  for (const p of parts) {
+    const m = p.match(/^(\d+)(?:[-–](\d+))?$/);
+    if (!m) throw new Error("Ne razumem '" + p + "' - uporabi obliko 1-3, 5");
+    let a = parseInt(m[1]), b = m[2] ? parseInt(m[2]) : a;
+    if (a > b) [a, b] = [b, a];
+    if (a < 1 || b > max) throw new Error("Dokument ima samo " + max + " strani.");
+    for (let i = a; i <= b; i++) out.push(i - 1);
+  }
+  return out;
+}
+
+el("splitInput").addEventListener("change", async () => {
+  const file = el("splitInput").files[0];
+  el("splitInput").value = "";
+  if (!file) return;
+  setStatus("splitStatus", "Berem ...");
+  try {
+    await loadScript(PDFLIB);
+    const bytes = await file.arrayBuffer();
+    const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+    splitSrc = { name: file.name, bytes, pages: doc.getPageCount() };
+    setStatus("splitStatus", file.name + " - " + splitSrc.pages + " strani.");
+    el("splitForm").style.display = "flex";
+    el("splitBtns").style.display = "flex";
+    el("splitPages").value = "";
+    el("splitPages").focus();
+  } catch (err) {
+    splitSrc = null;
+    setStatus("splitStatus", "PDF-ja ni bilo mogoče prebrati (morda je zaščiten z geslom).", true);
+  }
+});
+
+async function buildSplit() {
+  const idx = parsePages(el("splitPages").value, splitSrc.pages);
+  const src = await PDFLib.PDFDocument.load(splitSrc.bytes, { ignoreEncryption: true });
+  const out = await PDFLib.PDFDocument.create();
+  const pages = await out.copyPages(src, idx);
+  pages.forEach(p => out.addPage(p));
+  const tag = el("splitPages").value.replace(/\s+/g, "").replace(/[,;]/g, "_");
+  return { bytes: await out.save(), name: splitSrc.name.replace(/\.pdf$/i, "") + "-str" + tag + ".pdf", count: idx.length };
+}
+
+el("splitGo").addEventListener("click", async () => {
+  if (!splitSrc) return;
+  try {
+    const r = await buildSplit();
+    downloadBlob(new Blob([r.bytes], { type: "application/pdf" }), r.name);
+    setStatus("splitStatus", "Shranjeno: " + r.count + " strani (" + fmtSize(r.bytes.length) + ").");
+  } catch (err) { setStatus("splitStatus", err.message || String(err), true); }
+});
+el("splitShare").addEventListener("click", async () => {
+  if (!splitSrc) return;
+  try {
+    const r = await buildSplit();
+    await sharePdf(r.bytes, r.name, "splitStatus");
+  } catch (err) { setStatus("splitStatus", err.message || String(err), true); }
 });
 
 /* ---------- Galerija + datoteke ---------- */

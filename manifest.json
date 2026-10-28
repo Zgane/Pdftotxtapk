@@ -1,7 +1,7 @@
 {
   "name": "AI orodjarna",
   "short_name": "AI orodja",
-  "description": "Pretvorniki za AI: PDF, OCR, Word, Excel, slike - vse lokalno na napravi",
+  "description": "Pretvorniki za AI: PDF, OCR, Word, Excel in slike. Datoteke se obdelajo na napravi. Besedilo gre v Claude le, če uporabnik tapne gumb in ga prilepi.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

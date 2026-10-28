@@ -540,7 +540,7 @@ el("pdfInput").addEventListener("change", async () => {
   try {
     await initPdfjs();
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false, enableScripting: false }).promise;
     const text = await extractPdfText(pdf, "pdfStatus", "pdfProgB");
     el("pdfProgW").style.display = "none";
     if (!text.replace(/=+ STRAN \d+ =+/g, "").trim()) {
@@ -591,7 +591,7 @@ el("ocrInput").addEventListener("change", async () => {
     if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
       await initPdfjs();
       const buf = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false, enableScripting: false }).promise;
       for (let i = 1; i <= pdf.numPages; i++) {
         setStatus("ocrStatus", "OCR strani " + i + " / " + pdf.numPages + " (traja nekaj sekund) ...");
         el("ocrProgB").style.width = "0%";
@@ -872,7 +872,7 @@ el("pdfminInput").addEventListener("change", async () => {
     const preset = PDFMIN_PRESETS[el("pdfminLevel").value];
     const gray = el("pdfminGray").checked;
     const buf = await file.arrayBuffer();
-    const src = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
+    const src = await pdfjsLib.getDocument({ data: buf.slice(0), isEvalSupported: false, enableScripting: false }).promise;
     const out = await PDFLib.PDFDocument.create();
 
     for (let i = 1; i <= src.numPages; i++) {
@@ -1005,7 +1005,7 @@ el("mergeInput").addEventListener("change", async () => {
     try {
       bytes = await file.arrayBuffer();
       await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true }); // preveri, da ga lahko zapišemo
-      pdf = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+      pdf = await pdfjsLib.getDocument({ data: bytes.slice(0), isEvalSupported: false, enableScripting: false }).promise;
     } catch (e) {
       setStatus("mergeStatus", "Datoteke " + file.name + " ni bilo mogoče odpreti (morda je zaščitena z geslom).", true);
       continue;

@@ -109,25 +109,33 @@
   .desc { color: var(--ink-dim); font-size: 0.92rem; line-height: 1.55; max-width: 40rem; }
 
   .dropzone {
-    border: 1.5px dashed var(--stroke);
-    border-radius: 20px;
-    background: var(--panel);
-    padding: 36px 20px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 28px 12px 8px;
     text-align: center;
     cursor: pointer;
-    transition: border-color .15s, background .15s;
   }
   label.optrow { flex-wrap: nowrap; }
   label.optrow input { flex: 0 0 auto; }
-  .dropzone:active { border-color: var(--accent); background: var(--panel-2); }
+  .dropzone:active { background: transparent; border: none; }
+  .dropzone:active::before { opacity: 0.72; }
   .dropzone .big { display: none; }
   .dropzone::before {
     content: "+";
-    display: flex; align-items: center; justify-content: center;
-    width: 52px; height: 52px; margin: 0 auto 12px;
-    border-radius: 50%;
-    background: var(--accent); color: var(--accent-ink);
-    font-size: 1.9rem; font-weight: 400; line-height: 1;
+    display: block;
+    width: auto; height: auto;
+    margin: 0 auto 8px;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: var(--accent);
+    font-size: 2.75rem;
+    font-weight: 400;
+    line-height: 1;
   }
   .dropzone p { color: var(--ink-dim); font-size: 0.85rem; line-height: 1.4; }
   .dropzone p b { color: var(--ink); font-weight: 600; font-size: 0.95rem; }
@@ -248,8 +256,8 @@
   .pg.off .chk { background: rgba(0,0,0,0.55); color: transparent; border: 2px solid #fff; }
   .pg.loading::after { content: ""; position: absolute; inset: 0; background: var(--panel-2); }
   #mergeBtns { position: sticky; bottom: calc(var(--nav-h) + 8px + env(safe-area-inset-bottom)); z-index: 5; background: var(--bg); padding: 12px 0 4px; margin: 0; border-top: 1px solid var(--line); }
-  .dropzone.compact { padding: 16px; display: flex; align-items: center; justify-content: center; gap: 12px; text-align: left; }
-  .dropzone.compact::before { width: 36px; height: 36px; margin: 0; font-size: 1.4rem; flex: 0 0 auto; }
+  .dropzone.compact { padding: 8px 12px; display: flex; align-items: center; justify-content: center; gap: 12px; text-align: left; background: transparent; border: none; }
+  .dropzone.compact::before { width: auto; height: auto; margin: 0; font-size: 2rem; background: none; border: none; border-radius: 0; }
   .dropzone.compact br, .dropzone.compact #mergeSub { display: none; }
 </style>
 </head>

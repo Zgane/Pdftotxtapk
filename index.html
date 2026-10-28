@@ -208,7 +208,7 @@
 
 <header>
   <h1 id="pageTitle">PDF v besedilo</h1>
-  <span>AI orodjarna · vse ostane na telefonu</span>
+  <span>Datoteke se obdelajo na telefonu. V Claude gre besedilo le, če tapnete gumb in ga prilepite.</span>
 </header>
 
 
@@ -823,12 +823,13 @@ document.querySelectorAll("[data-ai]").forEach(btn => {
     const ta = el(btn.dataset.ai);
     const text = ta.value;
     const sid = statusIdFor(btn.dataset.ai);
-    if (text.length <= 6000) {
-      window.open("https://claude.ai/new?q=" + encodeURIComponent(text), "_blank");
-    } else {
-      try { await navigator.clipboard.writeText(text); } catch {}
-      setStatus(sid, "Besedilo je predolgo za samodejni prenos, zato je kopirano - v Claude ga samo prilepi.");
-      window.open("https://claude.ai/new", "_blank");
+    // Odpri takoj, dokler je klik še uporabniška gesta, sicer brskalnik okno blokira.
+    window.open("https://claude.ai/new", "_blank");
+    try {
+      await navigator.clipboard.writeText(text);
+      setStatus(sid, "Besedilo je kopirano. V Claude ga prilepite.");
+    } catch {
+      setStatus(sid, "Kopiranje ni uspelo. Besedilo označite in ga kopirajte ročno, nato ga prilepite v Claude.", true);
     }
   });
 });

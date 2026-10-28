@@ -782,7 +782,14 @@ el("heicInput").addEventListener("change", async () => {
 
         const row = document.createElement("div");
         row.style.cssText = "display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:0.82rem";
-        row.innerHTML = "<span style='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>" + name + "</span><span style='color:var(--ink-dim)'>" + fmtSize(blob.size) + "</span>";
+        const nameEl = document.createElement("span");
+        nameEl.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+        nameEl.textContent = name;
+        const sizeEl = document.createElement("span");
+        sizeEl.style.color = "var(--ink-dim)";
+        sizeEl.textContent = fmtSize(blob.size);
+        row.appendChild(nameEl);
+        row.appendChild(sizeEl);
         const btn = document.createElement("button");
         btn.textContent = "Prenesi";
         btn.style.cssText = "background:var(--accent);color:var(--accent-ink);border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:0.8rem;cursor:pointer";
@@ -1093,8 +1100,12 @@ async function sharePdf(bytes, name, statusId) {
 [["imgInput", "*/*"], ["heicInput", "*/*"], ["ocrInput", "image/*,application/pdf"]].forEach(([id, fileAccept]) => {
   const inp = el(id);
   const dz = document.querySelector('[data-input="' + id + '"]');
-  inp.setAttribute("accept", "image/*");
-  dz.querySelector("b").textContent = "Izberi sliko";
+  // OCR in HEIC obdržita accept in napis iz oznake, da glavni gumb sprejme
+  // skeniran PDF oziroma datoteke HEIC. Galerijski filter ostane le pri slikah.
+  if (id === "imgInput") {
+    inp.setAttribute("accept", "image/*");
+    dz.querySelector("b").textContent = "Izberi sliko";
+  }
   const alt = document.createElement("input");
   alt.type = "file";
   alt.accept = fileAccept;

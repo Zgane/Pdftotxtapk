@@ -209,12 +209,30 @@
     row-gap: 10px;
   }
   #tab-img .optrow select { width: 100%; }
-
-  #imgPreview {
-    max-width: 100%; max-height: 220px;
-    border-radius: 14px;
-    align-self: center; display: none;
+  #tab-img > .desc { margin-bottom: 0; }
+  #tab-img > #imgList {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
+  #tab-img > .optrow,
+  #tab-img > .dropzone,
+  #tab-img > .btn-files,
+  #tab-img > .progwrap,
+  #tab-img > .status,
+  #tab-img > #imgBtns { order: 2; }
+  .img-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 12px; font-size: 0.82rem;
+  }
+  .img-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .img-row .sz { color: var(--ink-dim); white-space: nowrap; }
+  .img-row.bad .sz { color: var(--err); }
   .sizecompare {
     display: none; justify-content: center; gap: 16px;
     font-size: 0.88rem; color: var(--ink-dim);
@@ -365,7 +383,7 @@
 
 <!-- ===================== IMG ===================== -->
 <section id="tab-img">
-  <p class="desc">Pomanjša in stisne fotografijo pred nalaganjem (npr. z 8 MB na ~200 KB) — hitreje in manj porabe limitov.</p>
+  <p class="desc">Pomanjša in stisne fotografije pred nalaganjem (npr. z 8 MB na ~200 KB) — hitreje in manj porabe limitov. Lahko izbereš več slik naenkrat.</p>
   <div class="optrow">
     Največja stranica:
     <select id="imgMaxDim">
@@ -380,20 +398,17 @@
       <option value="0.85">visoka</option>
     </select>
   </div>
+  <div id="imgList"></div>
   <div class="dropzone" data-input="imgInput">
     <div class="big">&#128248;</div>
-    <p><b>Tapni in izberi sliko</b></p>
+    <p><b>Tapni in izberi slike</b></p>
   </div>
-  <input type="file" id="imgInput" accept="image/*">
+  <input type="file" id="imgInput" accept="image/*" multiple>
+  <div class="progwrap" id="imgProgW"><div class="progbar" id="imgProgB"></div></div>
   <div class="status" id="imgStatus"></div>
-  <img id="imgPreview" alt="Predogled stisnjene slike">
-  <div class="sizecompare" id="imgCompare">
-    <span>prej: <b id="imgBefore"></b></span>
-    <span>&#8594;</span>
-    <span>potem: <b id="imgAfter"></b></span>
-  </div>
   <div class="btnrow" id="imgBtns" style="display:none">
-    <button class="btn-copy" id="imgSaveBtn">Shrani stisnjeno sliko</button>
+    <button class="btn-copy" id="imgSaveBtn">Shrani vse</button>
+    <button class="btn-save" id="imgShareBtn">Deli &#8230;</button>
   </div>
 </section>
 
@@ -759,48 +774,281 @@ el("xlsxInput").addEventListener("change", async () => {
   el("xlsxInput").value = "";
 });
 /* ---------- SLIKA ---------- */
-let compressedBlob = null, compressedName = "slika";
-el("imgInput").addEventListener("change", async () => {
-  const file = el("imgInput").files[0];
-  if (!file) return;
-  compressedName = file.name.replace(/\.[^.]+$/, "") + "-mala.jpg";
-  setStatus("imgStatus", "Stiskam ...");
-  el("imgPreview").style.display = "none";
-  el("imgCompare").style.display = "none";
-  el("imgBtns").style.display = "none";
+let imgResults = [];
+let imgBusy = false;
+
+function crc32(data) {
+  let c = ~0;
+  for (let i = 0; i < data.length; i++) {
+    c ^= data[i];
+    for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xEDB88320 & -(c & 1));
+  }
+  return ~c >>> 0;
+}
+
+function zipStore(files) {
+  const enc = new TextEncoder();
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name);
+    const crc = crc32(f.data);
+    const local = new Uint8Array(30 + name.length);
+    const dv = new DataView(local.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, f.data.length, true);
+    dv.setUint32(22, f.data.length, true);
+    dv.setUint16(26, name.length, true);
+    local.set(name, 30);
+    chunks.push(local, f.data);
+    const cen = new Uint8Array(46 + name.length);
+    const cv = new DataView(cen.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, f.data.length, true);
+    cv.setUint32(24, f.data.length, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint32(42, offset, true);
+    cen.set(name, 46);
+    central.push(cen);
+    offset += local.length + f.data.length;
+  }
+  const centralSize = central.reduce((sum, part) => sum + part.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, offset, true);
+  return new Blob([...chunks, ...central, end], { type: "application/zip" });
+}
+
+async function jpegOrientedSize(file) {
   try {
-    const maxDim = parseInt(el("imgMaxDim").value);
-    const quality = parseFloat(el("imgQuality").value);
-    const bmp = await createImageBitmap(file);
-    let { width, height } = bmp;
-    if (Math.max(width, height) > maxDim) {
-      const k = maxDim / Math.max(width, height);
-      width = Math.round(width * k);
-      height = Math.round(height * k);
+  if (!/jpe?g$/i.test(file.type) && !/\.jpe?g$/i.test(file.name)) return null;
+  const buf = await file.slice(0, Math.min(file.size, 131072)).arrayBuffer();
+  const v = new DataView(buf);
+  if (v.byteLength < 4 || v.getUint16(0) !== 0xFFD8) return null;
+  let orientation = 1;
+  let width = 0, height = 0;
+  let o = 2;
+  while (o + 4 < v.byteLength) {
+    if (v.getUint8(o) !== 0xFF) break;
+    const marker = v.getUint8(o + 1);
+    if (marker === 0xD8 || marker === 0xD9 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
+      o += 2;
+      continue;
+    }
+    const len = v.getUint16(o + 2);
+    if (len < 2 || o + 2 + len > v.byteLength) break;
+    if (marker === 0xE1) orientation = exifOrientation(v, o + 4, len - 2) || orientation;
+    if ((marker >= 0xC0 && marker <= 0xCF) && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
+      height = v.getUint16(o + 5);
+      width = v.getUint16(o + 7);
+      break;
+    }
+    o += 2 + len;
+  }
+  if (!width || !height) return null;
+  if (orientation >= 5 && orientation <= 8) return { width: height, height: width };
+  return { width, height };
+  } catch (e) {
+    return null;
+  }
+}
+
+function exifOrientation(view, start, len) {
+  if (len < 14) return 0;
+  if (view.getUint32(start) !== 0x45786966) return 0; // "Exif"
+  const tiff = start + 6;
+  const little = view.getUint16(tiff) === 0x4949;
+  const get16 = (p) => view.getUint16(p, little);
+  const get32 = (p) => view.getUint32(p, little);
+  if (get16(tiff + 2) !== 42) return 0;
+  let ifd = tiff + get32(tiff + 4);
+  const end = start + len;
+  if (ifd + 2 > end) return 0;
+  const count = get16(ifd);
+  ifd += 2;
+  for (let i = 0; i < count; i++) {
+    const entry = ifd + i * 12;
+    if (entry + 12 > end) return 0;
+    if (get16(entry) === 0x0112) return get16(entry + 8);
+  }
+  return 0;
+}
+
+async function loadBitmap(file, maxDim) {
+  const oriented = await jpegOrientedSize(file);
+  const base = { imageOrientation: "from-image", resizeQuality: "high" };
+  try {
+    if (oriented) {
+      const long = Math.max(oriented.width, oriented.height);
+      if (long > maxDim) {
+        const k = maxDim / long;
+        return await createImageBitmap(file, {
+          ...base,
+          resizeWidth: Math.max(1, Math.round(oriented.width * k)),
+          resizeHeight: Math.max(1, Math.round(oriented.height * k))
+        });
+      }
+      return await createImageBitmap(file, base);
+    }
+    return await createImageBitmap(file, { ...base, resizeWidth: maxDim });
+  } catch (e) {
+    return await createImageBitmap(file);
+  }
+}
+
+async function compressImageFile(file, maxDim, quality) {
+  const bmp = await loadBitmap(file, maxDim);
+  try {
+    let width = bmp.width, height = bmp.height;
+    const long = Math.max(width, height);
+    if (long > maxDim) {
+      const k = maxDim / long;
+      width = Math.max(1, Math.round(width * k));
+      height = Math.max(1, Math.round(height * k));
     }
     const canvas = document.createElement("canvas");
-    canvas.width = width; canvas.height = height;
+    canvas.width = width;
+    canvas.height = height;
     canvas.getContext("2d").drawImage(bmp, 0, 0, width, height);
-    compressedBlob = await new Promise(res => canvas.toBlob(res, "image/jpeg", quality));
-    el("imgPreview").src = URL.createObjectURL(compressedBlob);
-    el("imgPreview").style.display = "block";
-    el("imgBefore").textContent = fmtSize(file.size);
-    el("imgAfter").textContent = fmtSize(compressedBlob.size);
-    el("imgCompare").style.display = "flex";
-    el("imgBtns").style.display = "flex";
-    setStatus("imgStatus", "Končano (" + width + "×" + height + " px).");
+    const blob = await new Promise(res => canvas.toBlob(res, "image/jpeg", quality));
+    canvas.width = canvas.height = 0;
+    if (!blob) throw new Error("prazno");
+    return { blob, width, height };
+  } finally {
+    if (bmp.close) bmp.close();
+  }
+}
+
+function imgOutName(file, used) {
+  let name = file.name.replace(/\.[^.]+$/, "") + "-mala.jpg";
+  if (!used.has(name)) { used.add(name); return name; }
+  const base = name.replace(/\.jpg$/i, "");
+  let n = 2;
+  while (used.has(base + "-" + n + ".jpg")) n++;
+  name = base + "-" + n + ".jpg";
+  used.add(name);
+  return name;
+}
+
+function addImgRow(name, sizeText, failed) {
+  const row = document.createElement("div");
+  row.className = "img-row" + (failed ? " bad" : "");
+  const nm = document.createElement("span");
+  nm.className = "nm";
+  nm.textContent = name;
+  const sz = document.createElement("span");
+  sz.className = "sz";
+  sz.textContent = sizeText;
+  row.appendChild(nm);
+  row.appendChild(sz);
+  el("imgList").appendChild(row);
+}
+
+async function imgAsZip(items) {
+  const files = [];
+  for (const item of items) {
+    files.push({ name: item.name, data: new Uint8Array(await item.blob.arrayBuffer()) });
+  }
+  return zipStore(files);
+}
+
+el("imgInput").addEventListener("change", async () => {
+  const files = Array.from(el("imgInput").files);
+  el("imgInput").value = "";
+  if (!files.length) return;
+  if (imgBusy) {
+    setStatus("imgStatus", "Počakaj, trenutni paket se še obdeluje.", true);
+    return;
+  }
+  imgBusy = true;
+  imgResults = [];
+  el("imgList").textContent = "";
+  el("imgBtns").style.display = "none";
+  el("imgProgW").style.display = "block";
+  el("imgProgB").style.width = "0%";
+  const maxDim = parseInt(el("imgMaxDim").value, 10);
+  const quality = parseFloat(el("imgQuality").value);
+  const used = new Set();
+  let ok = 0, fail = 0;
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setStatus("imgStatus", "Stiskam " + (i + 1) + " / " + files.length + " …");
+      el("imgProgB").style.width = Math.round(i / files.length * 100) + "%";
+      const outName = imgOutName(file, used);
+      try {
+        const result = await compressImageFile(file, maxDim, quality);
+        imgResults.push({ blob: result.blob, name: outName });
+        ok++;
+        addImgRow(outName, fmtSize(file.size) + " → " + fmtSize(result.blob.size));
+      } catch (e) {
+        fail++;
+        addImgRow(file.name, "ni uspelo", true);
+      }
+      el("imgProgB").style.width = Math.round((i + 1) / files.length * 100) + "%";
+    }
+    el("imgProgW").style.display = "none";
+    if (!ok) {
+      setStatus("imgStatus", "Nobene slike ni bilo mogoče stisniti.", true);
+    } else {
+      el("imgSaveBtn").textContent = ok > 1 ? "Shrani vse" : "Shrani sliko";
+      el("imgBtns").style.display = "flex";
+      const tail = fail ? " (neuspešno: " + fail + ")" : "";
+      setStatus("imgStatus", "Končano: " + ok + " / " + files.length + tail + ".");
+    }
+  } finally {
+    imgBusy = false;
+  }
+});
+
+el("imgSaveBtn").addEventListener("click", async () => {
+  if (!imgResults.length) return;
+  if (imgResults.length === 1) {
+    downloadBlob(imgResults[0].blob, imgResults[0].name);
+    return;
+  }
+  setStatus("imgStatus", "Pripravljam ZIP …");
+  try {
+    const zip = await imgAsZip(imgResults);
+    downloadBlob(zip, "slike-stisnjene.zip");
+    setStatus("imgStatus", "Shranjeno kot ZIP (" + imgResults.length + " slik).");
   } catch (err) {
     setStatus("imgStatus", "Napaka: " + (err.message || err), true);
   }
-  el("imgInput").value = "";
 });
-el("imgSaveBtn").addEventListener("click", () => {
-  if (!compressedBlob) return;
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(compressedBlob);
-  a.download = compressedName;
-  a.click();
-  URL.revokeObjectURL(a.href);
+
+el("imgShareBtn").addEventListener("click", async () => {
+  if (!imgResults.length) return;
+  const files = imgResults.map(item => new File([item.blob], item.name, { type: "image/jpeg" }));
+  if (navigator.canShare && navigator.canShare({ files })) {
+    try {
+      await navigator.share({ files, title: "Stisnjene slike" });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  try {
+    if (imgResults.length === 1) {
+      downloadBlob(imgResults[0].blob, imgResults[0].name);
+    } else {
+      downloadBlob(await imgAsZip(imgResults), "slike-stisnjene.zip");
+    }
+    setStatus("imgStatus", "Deljenje ni podprto — slike so shranjene v Prenose.", true);
+  } catch (err) {
+    setStatus("imgStatus", "Napaka: " + (err.message || err), true);
+  }
 });
 
 /* ---------- HEIC ---------- */
@@ -1162,7 +1410,8 @@ async function sharePdf(bytes, name, statusId) {
   // skeniran PDF oziroma datoteke HEIC. Galerijski filter ostane le pri slikah.
   if (id === "imgInput") {
     inp.setAttribute("accept", "image/*");
-    dz.querySelector("b").textContent = "Izberi sliko";
+    inp.multiple = true;
+    dz.querySelector("b").textContent = "Izberi slike";
   }
   const alt = document.createElement("input");
   alt.type = "file";
